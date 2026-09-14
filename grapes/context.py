@@ -23,3 +23,12 @@ class Context:
     def effect(self, setup, teardown):
         setup()
         self._effects.append(teardown)
+
+    def use(self, plugin):
+        child = self._harness.create_context()
+
+        def setup():
+            plugin(child)
+
+        self.effect(setup, child.undo)
+        return child.undo
