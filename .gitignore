@@ -12,6 +12,9 @@ env/
 # pytest
 .pytest_cache/
 
+# Local / private
+project.md
+
 # Editor / OS
 .directory
 .vscode/

@@ -24,11 +24,26 @@ class Context:
         setup()
         self._effects.append(teardown)
 
-    def use(self, plugin):
+    def use(self, plugin, inject=None):
         child = self._harness.create_context()
+        inject = inject or []
 
-        def setup():
-            plugin(child)
+        if all(key in self._harness.values for key in inject):
 
-        self.effect(setup, child.undo)
+            def setup():
+                plugin(child)
+
+            self.effect(setup, child.undo)
         return child.undo
+
+    def set(self, key, value):
+        def setup():
+            self._harness.values[key] = value
+
+        def teardown():
+            self._harness.values.pop(key, None)
+
+        self.effect(setup, teardown)
+
+    def get(self, key):
+        return self._harness.values.get(key)

@@ -1,6 +1,6 @@
-from grapes import Harness
+from grapes import Harness, harness
 from grapes import Context
-from grapes.plugins import calculator_plugin, file_search_plugin
+from grapes.plugins import calculator_plugin, file_search_plugin, greeter_plugin
 
 
 def test_undo_removes_the_tool():
@@ -42,3 +42,35 @@ def test_parent_sees_child():
     ctx.undo()
     assert "add" not in h.tools
     assert "search_file" not in h.tools
+
+
+def test_set_get_and_undo_value():
+    h = Harness()
+    ctx = h.create_context()
+    ctx.set("language", "en")
+    assert ctx.get("language") == "en"
+    ctx.undo()
+    assert ctx.get("language") is None
+
+
+def test_plugin_dependency_missing():
+    h = Harness()
+    ctx = h.create_context()
+    ctx.use(greeter_plugin, inject=["language"])
+    assert "greet" not in h.tools
+
+
+def test_plugin_dependency_present():
+    h = Harness()
+    ctx = h.create_context()
+    ctx.set("language", "en")
+    ctx.use(greeter_plugin, inject=["language"])
+    assert "greet" in h.tools
+
+
+def test_dependency_satisfied_by_falsy_value():
+    h = Harness()
+    ctx = h.create_context()
+    ctx.set("language", "")
+    ctx.use(greeter_plugin, inject=["language"])
+    assert "greet" in h.tools
