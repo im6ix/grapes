@@ -1,4 +1,4 @@
-from grapes import Harness, harness
+from grapes import Harness
 from grapes import Context
 from grapes.plugins import calculator_plugin, file_search_plugin, greeter_plugin
 
@@ -73,4 +73,13 @@ def test_dependency_satisfied_by_falsy_value():
     ctx = h.create_context()
     ctx.set("language", "")
     ctx.use(greeter_plugin, inject=["language"])
+    assert "greet" in h.tools
+
+
+def test_activate_automatically():
+    h = Harness()
+    ctx = h.create_context()
+    ctx.use(greeter_plugin, inject=["language"])
+    assert "greet" not in h.tools
+    ctx.set("language", "en")
     assert "greet" in h.tools

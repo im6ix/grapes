@@ -6,6 +6,7 @@ class Harness:
         self.tools = {}
         self.values = {}
         self.plugins = []
+        self.components = []
 
     def create_context(self):
         return Context(self)

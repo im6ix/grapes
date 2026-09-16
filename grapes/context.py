@@ -26,24 +26,50 @@ class Context:
 
     def use(self, plugin, inject=None):
         child = self._harness.create_context()
-        inject = inject or []
+        comp = {
+            "plugin": plugin,
+            "inject": inject or [],
+            "child": child,
+            "active": False,
+        }
+        self._harness.components.append(comp)
 
-        if all(key in self._harness.values for key in inject):
+        def setup():
+            self._refresh(comp)
 
-            def setup():
-                plugin(child)
+        def teardown():
+            if comp["active"]:
+                child.undo()
+                comp["active"] = False
+            self._harness.components.remove(comp)
 
-            self.effect(setup, child.undo)
-        return child.undo
+        self.effect(setup, teardown)
+        return teardown
 
     def set(self, key, value):
         def setup():
             self._harness.values[key] = value
+            self._refresh_all()
 
         def teardown():
             self._harness.values.pop(key, None)
+            self._refresh_all()
 
         self.effect(setup, teardown)
 
     def get(self, key):
         return self._harness.values.get(key)
+
+    def _refresh(self, comp):
+        satisfied = all(key in self._harness.values for key in comp["inject"])
+
+        if satisfied and not comp["active"]:
+            comp["plugin"](comp["child"])  # -> run the plugin on the child
+            comp["active"] = True
+        elif not satisfied and comp["active"]:
+            comp["child"].undo()
+            comp["active"] = False
+
+    def _refresh_all(self):
+        for comp in self._harness.components:
+            self._refresh(comp)
