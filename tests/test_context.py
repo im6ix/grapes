@@ -83,3 +83,24 @@ def test_activate_automatically():
     assert "greet" not in h.tools
     ctx.set("language", "en")
     assert "greet" in h.tools
+
+
+def test_deactivation_when_value_removed():
+    h = Harness()
+    ctx = h.create_context()
+    ctx.use(greeter_plugin, inject=["language"])
+
+    remove = ctx.set("language", "en")
+    assert "greet" in h.tools
+
+    remove()
+    assert "greet" not in h.tools
+
+
+def test_dispose_then_undo_is_safe():
+    h = Harness()
+    ctx = h.create_context()
+    dispose = ctx.use(greeter_plugin)
+    dispose()
+    ctx.undo()
+    assert "greet" not in h.tools
