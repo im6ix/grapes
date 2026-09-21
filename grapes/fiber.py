@@ -7,7 +7,7 @@ class Fiber:
         self.active = False
 
     def refresh(self):
-        satisfied = all(key in self.harness.values for key in self.inject)
+        satisfied = all(key in self.harness.reflect.values for key in self.inject)
 
         if satisfied:
             self.activate()

@@ -1,6 +1,3 @@
-from .fiber import Fiber
-
-
 class Context:
     def __init__(self, harness):
         self._harness = harness
@@ -38,32 +35,10 @@ class Context:
         return dispose
 
     def use(self, plugin, inject=None):
-        fiber = Fiber(self._harness, plugin, inject)
-        self._harness.fibers.append(fiber)
-
-        def setup():
-            fiber.refresh()
-
-        def teardown():
-            fiber.deactivate()
-            self._harness.fibers.remove(fiber)
-
-        return self.effect(setup, teardown)
+        return self._harness.registry.use(self, plugin, inject)
 
     def set(self, key, value):
-        def setup():
-            self._harness.values[key] = value
-            self._refresh_all()
-
-        def teardown():
-            self._harness.values.pop(key, None)
-            self._refresh_all()
-
-        return self.effect(setup, teardown)
+        return self._harness.reflect.provide(self, key, value)
 
     def get(self, key):
-        return self._harness.values.get(key)
-
-    def _refresh_all(self):
-        for fiber in self._harness.fibers:
-            fiber.refresh()
+        return self._harness.reflect.get(key)
