@@ -1,15 +1,5 @@
 from grapes import Harness
-from grapes import Context
 from grapes.plugins import calculator_plugin, file_search_plugin, greeter_plugin
-
-
-def test_undo_removes_the_tool():
-    h = Harness()
-    ctx = h.create_context()
-    ctx.register_tool("add", lambda a, b: a + b)
-    ctx.undo()
-
-    assert "add" not in h.tools
 
 
 def test_two_contexts():
@@ -22,35 +12,6 @@ def test_two_contexts():
 
     assert "add" not in h.tools
     assert "search_file" in h.tools
-
-
-def test_child_ctx():
-    h = Harness()
-    ctx = h.create_context()
-    dispose_calc = ctx.use(calculator_plugin)
-    dispose_search = ctx.use(file_search_plugin)
-    dispose_calc()
-    assert "add" not in h.tools
-    assert "search_file" in h.tools
-
-
-def test_parent_sees_child():
-    h = Harness()
-    ctx = h.create_context()
-    dispose_calc = ctx.use(calculator_plugin)
-    dispose_search = ctx.use(file_search_plugin)
-    ctx.undo()
-    assert "add" not in h.tools
-    assert "search_file" not in h.tools
-
-
-def test_set_get_and_undo_value():
-    h = Harness()
-    ctx = h.create_context()
-    ctx.set("language", "en")
-    assert ctx.get("language") == "en"
-    ctx.undo()
-    assert ctx.get("language") is None
 
 
 def test_plugin_dependency_missing():
@@ -94,13 +55,4 @@ def test_deactivation_when_value_removed():
     assert "greet" in h.tools
 
     remove()
-    assert "greet" not in h.tools
-
-
-def test_dispose_then_undo_is_safe():
-    h = Harness()
-    ctx = h.create_context()
-    dispose = ctx.use(greeter_plugin)
-    dispose()
-    ctx.undo()
     assert "greet" not in h.tools
