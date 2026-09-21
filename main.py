@@ -1,5 +1,5 @@
 from grapes import Harness
-from grapes.plugins import calculator_plugin, file_search_plugin
+from grapes.plugins import calculator_plugin
 
 
 h = Harness()

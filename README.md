@@ -15,7 +15,7 @@ Two ideas drive the design:
 
 - **Temporal composability** — removing a plugin reverts everything it did.
 - **Spatial composability** — plugins declare dependencies and activate /
-  deactivate as those dependencies appear and disappear. *(not built yet)*
+  deactivate as those dependencies appear and disappear.
 
 ## Status
 
@@ -24,8 +24,10 @@ Two ideas drive the design:
 - [x] `ctx.register_tool` implemented on top of `effect`.
 - [x] `ctx.use(plugin)` mounts a plugin in its own child context and returns a
       `dispose`; a parent `ctx.undo()` cascades to its children.
-- [ ] Spatial composability (coeffects): declared dependencies that drive
-      activation.
+- [x] Spatial composability (basic): a plugin with `inject` keys activates when
+      they are provided and deactivates when they are withdrawn. `ctx.set` /
+      `ctx.get` provide and read values, and `Service` is the base class for
+      providing a capability.
 - [ ] Component loader: configuration reconciliation and hot module replacement.
 
 ## Usage
@@ -56,11 +58,14 @@ uv run pytest
 
 ```
 grapes/
-  harness.py      # Harness: the shared world (holds the tool registry)
+  harness.py      # Harness: the shared world (reflect + registry + tools)
   context.py      # Context: a scope that tracks and reverts its effects
-  plugins/        # example plugins (calculator, file_search)
-  registry.py     # unused: an earlier experimental tool registry
-tests/            # tests
+  fiber.py        # Fiber: one mounted plugin instance and its lifecycle
+  reflect.py      # Reflect: the value store (provide / get / notify)
+  registry.py     # Registry: the mounted fibers + the mount operation
+  service.py      # Service: base class for a plugin that provides a capability
+  plugins/        # example plugins (calculator, file_search, greeter)
+tests/            # one test file per concern
 docs/             # the reference paper
 main.py           # scratch entry point
 ```
