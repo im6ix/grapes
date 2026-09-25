@@ -31,8 +31,8 @@ class Context:
 
         print(f"Registered new tool: {name}")
 
-    def call_tool(self, name, *args):
-        return self._harness.tools[name](*args)
+    def call_tool(self, name: str, *args: object, **kwargs: object) -> object:
+        return self._harness.tools[name](*args, **kwargs)
 
     def undo(self) -> None:
         for undo_func in reversed(self._effects):

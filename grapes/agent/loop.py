@@ -1,6 +1,10 @@
 from __future__ import annotations
 from typing import TYPE_CHECKING, Any, Callable
 
+
+import json
+
+
 if TYPE_CHECKING:
     from ..context import Context
 
@@ -22,6 +26,22 @@ def run(
 
         name = reply["name"]
         args = reply["args"]
-        result = ctx.call_tool(name, *args)
-        messages.append({"role": "tool", "content": str(result)})
+        call_id = reply["id"]
+
+        messages.append({
+            "role": "assistant",
+            "content": "",
+            "tool_calls": [{
+                "id": call_id,
+                "type": "function",
+                "function": {"name": name, "arguments": json.dumps(args)},
+            }],
+        })
+
+        result = ctx.call_tool(name, **args)
+        messages.append({
+            "role": "tool",
+            "tool_call_id": call_id,
+            "content": str(result),
+        })
     raise RuntimeError("too many steps")
