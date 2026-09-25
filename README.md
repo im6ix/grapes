@@ -28,6 +28,13 @@ Two ideas drive the design:
       they are provided and deactivates when they are withdrawn. `ctx.set` /
       `ctx.get` provide and read values, and `Service` is the base class for
       providing a capability.
+- [x] Events: `ctx.on(name, handler)` / `ctx.emit(name, ...)`; listeners are
+      revertible effects.
+- [x] Logger: `ctx.logger.info / warn / error`.
+- [x] Agent loop: `run(ctx, model, message)` drives model → tool → model until an
+      answer. The model is a plain function, so it can be faked in tests.
+- [x] Real model: `grapes/agent/model.py` talks to an OpenAI-compatible chat API
+      (opencode-go) and turns tool calls into loop replies, which `run` executes.
 - [ ] Component loader: configuration reconciliation and hot module replacement.
 
 ## Usage
@@ -45,6 +52,24 @@ print(h.tools["add"](3, 5))            # 8
 dispose()                              # unload just this plugin
 print(h.tools)                         # {}
 ```
+
+### An agent that uses a tool
+
+```python
+from grapes import Harness
+from grapes.agent import run
+from grapes.agent.model import model
+
+h = Harness()
+ctx = h.create_context()
+ctx.register_tool("add", lambda a, b: a + b)
+
+print(run(ctx, model, "Use the add tool to add 2 and 3."))   # 5
+```
+
+The model is a plain function (`messages -> reply`), so tests can pass a fake.
+The real one speaks an OpenAI-compatible chat API; the nested wire format is
+confined to `grapes/agent/model.py`.
 
 ## Tests
 
@@ -64,6 +89,11 @@ grapes/
   reflect.py      # Reflect: the value store (provide / get / notify)
   registry.py     # Registry: the mounted fibers + the mount operation
   service.py      # Service: base class for a plugin that provides a capability
+  events.py       # Events: ctx.on / ctx.emit
+  logger.py       # Logger: ctx.logger.info / warn / error
+  agent/
+    loop.py       # run(): model -> tool -> model, capped by max_steps
+    model.py      # the real model: OpenAI-compatible chat API (opencode-go)
   plugins/        # example plugins (calculator, file_search, greeter)
 tests/            # one test file per concern
 docs/             # the reference paper
