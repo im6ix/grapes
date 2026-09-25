@@ -6,6 +6,7 @@ from .context import Context
 from .events import Events
 from .reflect import Reflect
 from .registry import Registry
+from .logger import Logger
 
 
 class Harness:
@@ -14,6 +15,7 @@ class Harness:
         self.reflect = Reflect(self)
         self.registry = Registry(self)
         self.events = Events(self)
+        self.logger = Logger()
 
     def create_context(self) -> Context:
         return Context(self)

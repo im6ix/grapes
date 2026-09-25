@@ -18,6 +18,7 @@ class Context:
     def __init__(self, harness: Harness) -> None:
         self._harness = harness
         self._effects: list[Disposer] = []
+        self.logger = harness.logger
 
     def register_tool(self, name: str, func: Callable[..., object]) -> None:
         def setup() -> None:
@@ -29,6 +30,9 @@ class Context:
         self.effect(setup, teardown)
 
         print(f"Registered new tool: {name}")
+
+    def call_tool(self, name, *args):
+        return self._harness.tools[name](*args)
 
     def undo(self) -> None:
         for undo_func in reversed(self._effects):
