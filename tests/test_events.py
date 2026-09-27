@@ -14,7 +14,7 @@ def test_register_and_emit():
     assert calls == [1]
 
 
-def test_undo_removes_listener():
+async def test_undo_removes_listener():
     h = Harness()
     ctx = h.create_context()
     calls = []
@@ -23,6 +23,6 @@ def test_undo_removes_listener():
         calls.append(value)
 
     ctx.on("ping", handler)
-    ctx.undo()
+    await ctx.undo()
     ctx.emit("ping", 1)
     assert calls == []

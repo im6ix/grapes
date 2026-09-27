@@ -1,4 +1,4 @@
-from grapes.agent import _reply_from
+from grapes.agent.model import _reply_from
 
 
 def test_answer():

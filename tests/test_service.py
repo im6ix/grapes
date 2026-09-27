@@ -14,7 +14,7 @@ def test_service_register_itself():
     assert ctx.get("greeter") is g
 
 
-def test_undo_removes_service():
+async def test_undo_removes_service():
     h = Harness()
     ctx = h.create_context()
 
@@ -23,5 +23,5 @@ def test_undo_removes_service():
             super().__init__(ctx, "greeter")
 
     Greeter(ctx)
-    ctx.undo()
+    await ctx.undo()
     assert ctx.get("greeter") is None

@@ -40,17 +40,24 @@ Two ideas drive the design:
 ## Usage
 
 ```python
+import asyncio
+
 from grapes import Harness
 from grapes.plugins import calculator_plugin
 
-h = Harness()
-ctx = h.create_context()
 
-dispose = ctx.use(calculator_plugin)   # mount the plugin
-print(h.tools["add"](3, 5))            # 8
+async def main() -> None:
+    h = Harness()
+    ctx = h.create_context()
 
-dispose()                              # unload just this plugin
-print(h.tools)                         # {}
+    dispose = await ctx.use(calculator_plugin)   # mount the plugin
+    print(h.tools["add"](3, 5))                  # 8
+
+    await dispose()                              # unload just this plugin
+    print(h.tools)                               # {}
+
+
+asyncio.run(main())
 ```
 
 ### An agent that uses a tool

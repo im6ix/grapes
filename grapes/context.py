@@ -1,17 +1,24 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, Callable
+from typing import TYPE_CHECKING, Callable, Any, Awaitable
+import inspect
 
 if TYPE_CHECKING:
     from .harness import Harness
 
 
 # A plugin is a function that runs against a context and installs effects on it.
-Plugin = Callable[["Context"], None]
+Plugin = Callable[["Context"], Awaitable[None] | None]
 # An event handler receives whatever `emit` was called with.
 Handler = Callable[..., None]
 # A disposer undoes one effect; `effect` returns one.
-Disposer = Callable[[], None]
+Disposer = Callable[[], Awaitable[None]]
+Teardown = Callable[[], Awaitable[None] | None]
+
+
+async def _settle(result: Any) -> None:
+    if inspect.isawaitable(result):
+        await result
 
 
 class Context:
@@ -34,28 +41,27 @@ class Context:
     def call_tool(self, name: str, *args: object, **kwargs: object) -> object:
         return self._harness.tools[name](*args, **kwargs)
 
-    def undo(self) -> None:
-        for undo_func in reversed(self._effects):
-            undo_func()
-
+    async def undo(self) -> None:
+        for dispose in reversed(self._effects):
+            await dispose()
         self._effects.clear()
 
-    def effect(self, setup: Disposer, teardown: Disposer) -> Disposer:
+    def effect(self, setup: Callable[[], object], teardown: Teardown) -> Disposer:
         setup()
         armed = True
 
-        def dispose() -> None:
+        async def dispose() -> None:
             nonlocal armed
             if not armed:
                 return
             armed = False
-            teardown()
+            await _settle(teardown())
 
         self._effects.append(dispose)
         return dispose
 
-    def use(self, plugin: Plugin, inject: list[str] | None = None) -> Disposer:
-        return self._harness.registry.use(self, plugin, inject)
+    async def use(self, plugin: Plugin, inject: list[str] | None = None) -> Disposer:
+        return await self._harness.registry.use(self, plugin, inject)
 
     def set(self, key: str, value: object) -> Disposer:
         return self._harness.reflect.provide(self, key, value)
