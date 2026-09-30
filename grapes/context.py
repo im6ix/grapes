@@ -43,7 +43,10 @@ class Context:
 
     async def undo(self) -> None:
         for dispose in reversed(self._effects):
-            await dispose()
+            try:
+                await dispose()
+            except Exception as error:
+                self.logger.error(str(error))
         self._effects.clear()
 
     def effect(self, setup: Callable[[], object], teardown: Teardown) -> Disposer:

@@ -116,6 +116,7 @@ class Fiber:
             # The plugin raised: mark FAILED, clear inertia so we're idle,
             # and re-raise so whoever waits (ctx.use / settle) sees the error.
             self.state = FiberState.FAILED
+            await self.ctx.undo()
             self.inertia = None
             raise
         # Loaded. Now re-check: target may have changed while we were loading.
