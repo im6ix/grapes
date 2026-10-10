@@ -7,5 +7,10 @@ if TYPE_CHECKING:
 
 
 def file_search_plugin(ctx: Context) -> None:
-    ctx.register_tool("search_file", lambda: print("seraching..."))
+    ctx.register_tool(
+        "search_file",
+        lambda: print("seraching..."),
+        description="Search the file system",
+        parameters={"type": "object", "properties": {}},
+    )
     print("loading plugin")

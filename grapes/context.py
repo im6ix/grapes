@@ -1,10 +1,19 @@
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Callable, Any, Awaitable
+from dataclasses import dataclass
 import inspect
 
 if TYPE_CHECKING:
     from .harness import Harness
+
+
+@dataclass
+class Tool:
+    name: str
+    description: str
+    parameters: dict
+    func: Callable[..., object]
 
 
 # A plugin is a function that runs against a context and installs effects on it.
@@ -27,19 +36,39 @@ class Context:
         self._effects: list[Disposer] = []
         self.logger = harness.logger
 
-    def register_tool(self, name: str, func: Callable[..., object]) -> None:
+    def register_tool(
+        self,
+        name: str,
+        func: Callable[..., object],
+        *,
+        description: str,
+        parameters: dict[str, object],
+    ) -> None:
+        tool = Tool(name, description, parameters, func)
+
         def setup() -> None:
-            self._harness.tools[name] = func
+            self._harness.tools[name] = tool
 
         def teardown() -> None:
             self._harness.tools.pop(name, None)
 
         self.effect(setup, teardown)
 
-        print(f"Registered new tool: {name}")
-
     def call_tool(self, name: str, *args: object, **kwargs: object) -> object:
-        return self._harness.tools[name](*args, **kwargs)
+        return self._harness.tools[name].func(*args, **kwargs)
+
+    def tool_schemas(self) -> list[dict[str, object]]:
+        return [
+            {
+                "type": "function",
+                "function": {
+                    "name": name,
+                    "description": tool.description,
+                    "parameters": tool.parameters,
+                },
+            }
+            for name, tool in self._harness.tools.items()
+        ]
 
     async def undo(self) -> None:
         for dispose in reversed(self._effects):

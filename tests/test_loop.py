@@ -5,7 +5,16 @@ from grapes.agent import run
 def test_loop_runs_a_tool_then_answers():
     h = Harness()
     ctx = h.create_context()
-    ctx.register_tool("add", lambda a, b: a + b)
+    ctx.register_tool(
+        "add",
+        lambda a, b: a + b,
+        description="Add two integers",
+        parameters={
+            "type": "object",
+            "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}},
+            "required": ["a", "b"],
+        },
+    )
 
     def fake_model(messages):
         if any(m["role"] == "tool" for m in messages):

@@ -12,7 +12,7 @@ from .logger import Logger
 
 class Harness:
     def __init__(self) -> None:
-        self.tools: dict[str, Callable[..., object]] = {}
+        self.tools: dict[str, Tool] = {}
         self.reflect = Reflect(self)
         self.registry = Registry(self)
         self.events = Events(self)

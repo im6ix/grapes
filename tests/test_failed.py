@@ -9,7 +9,12 @@ async def test_plugin_load_drains_effects():
     ctx = h.create_context()
 
     def bad_plugin(ctx) -> None:
-        ctx.register_tool("half", lambda: print("bad_plugin"))
+        ctx.register_tool(
+            "half",
+            lambda: print("bad_plugin"),
+            description="A tool from a plugin that fails",
+            parameters={"type": "object", "properties": {}},
+        )
         raise RuntimeError("boom")
 
     with pytest.raises(RuntimeError):

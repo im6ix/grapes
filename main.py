@@ -9,7 +9,7 @@ async def main() -> None:
     ctx = h.create_context()
     calculator_plugin(ctx)
 
-    print(ctx._harness.tools["add"](3, 5))
+    print(ctx._harness.tools["add"].func(3, 5))
     await ctx.undo()
     print(ctx._harness.tools)
 

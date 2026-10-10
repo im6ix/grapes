@@ -21,7 +21,10 @@ Two ideas drive the design:
 
 - [x] Revertible effects: `ctx.effect(setup, teardown)` is the single mutation
       primitive; every change flows through it.
-- [x] `ctx.register_tool` implemented on top of `effect`.
+- [x] Tools carry a description + JSON Schema: `ctx.register_tool(name, func, *,
+      description, parameters)` stores them (still on top of `effect`), and
+      `ctx.tool_schemas()` returns them in the OpenAI function-calling shape.
+      Unmounting a plugin removes its schemas automatically.
 - [x] `ctx.use(plugin)` mounts a plugin in its own child context and returns a
       `dispose`; a parent `ctx.undo()` cascades to its children.
 - [x] Spatial composability (basic): a plugin with `inject` keys activates when
@@ -35,6 +38,8 @@ Two ideas drive the design:
       answer. The model is a plain function, so it can be faked in tests.
 - [x] Real model: `grapes/agent/model.py` talks to an OpenAI-compatible chat API
       (opencode-go) and turns tool calls into loop replies, which `run` executes.
+- [ ] The model sees the registered tools: `run` passes `ctx.tool_schemas()` to
+      the model. Until then `grapes/agent/model.py` still hardcodes a single tool.
 - [ ] Component loader: configuration reconciliation and hot module replacement.
 
 ## Usage
@@ -51,7 +56,7 @@ async def main() -> None:
     ctx = h.create_context()
 
     dispose = await ctx.use(calculator_plugin)   # mount the plugin
-    print(h.tools["add"](3, 5))                  # 8
+    print(h.tools["add"].func(3, 5))         # 8
 
     await dispose()                              # unload just this plugin
     print(h.tools)                               # {}
@@ -69,7 +74,16 @@ from grapes.agent.model import model
 
 h = Harness()
 ctx = h.create_context()
-ctx.register_tool("add", lambda a, b: a + b)
+ctx.register_tool(
+    "add",
+    lambda a, b: a + b,
+    description="Add two integers",
+    parameters={
+        "type": "object",
+        "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}},
+        "required": ["a", "b"],
+    },
+)
 
 print(run(ctx, model, "Use the add tool to add 2 and 3."))   # 5
 ```
@@ -91,7 +105,7 @@ uv run pytest
 ```
 grapes/
   harness.py      # Harness: the shared world (reflect + registry + tools)
-  context.py      # Context: a scope that tracks and reverts its effects
+  context.py      # Context: a scope; effects + the tool API (register/call/schemas)
   fiber.py        # Fiber: one mounted plugin instance and its lifecycle
   reflect.py      # Reflect: the value store (provide / get / notify)
   registry.py     # Registry: the mounted fibers + the mount operation

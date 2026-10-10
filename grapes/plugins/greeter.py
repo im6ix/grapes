@@ -7,4 +7,9 @@ if TYPE_CHECKING:
 
 
 def greeter_plugin(ctx: Context) -> None:
-    ctx.register_tool("greet", lambda: "hello")
+    ctx.register_tool(
+        "greet",
+        lambda: "hello",
+        description="Greet the user",
+        parameters={"type": "object", "properties": {}},
+    )
