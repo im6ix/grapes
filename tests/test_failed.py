@@ -47,3 +47,31 @@ async def test_failed_teardown_does_not_block_undo():
 
     await ctx.undo()
     assert "kept" not in h.tools
+
+
+async def test_failed_fiber_stays_failed_on_refresh():
+    h = Harness()
+    ctx = h.create_context()
+
+    calls = 0
+
+    def attempt(ctx):
+        nonlocal calls
+        calls += 1
+        raise RuntimeError("boom")
+
+    with pytest.raises(RuntimeError):
+        await ctx.use(attempt)
+
+    fiber = h.registry.fibers[0]
+    assert fiber.state is FiberState.FAILED
+    assert calls == 1
+
+    fiber.refresh()
+    try:
+        await fiber.await_()
+    except RuntimeError:
+        pass
+
+    assert fiber.state is FiberState.FAILED
+    assert calls == 1

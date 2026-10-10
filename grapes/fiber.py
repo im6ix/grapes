@@ -70,8 +70,9 @@ class Fiber:
     # re-enter itself.
     # target true + not ACTIVE -> start loading.
     # target false + ACTIVE    -> start unloading.
+    # Added a new guard: if a fiber has failed then we dont reload it.
     def _drive(self) -> None:
-        if self.inertia is not None:
+        if self.inertia is not None or self.state is FiberState.FAILED:
             return
         if self.target and self.state is not FiberState.ACTIVE:
             self.inertia = asyncio.create_task(self._load())
