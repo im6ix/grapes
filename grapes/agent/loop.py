@@ -14,20 +14,23 @@ def run(
     model: Callable[[list[dict[str, Any]], list[dict[str, object]]], dict],
     message: str,
     max_steps: int = 10,
+    messages: list[dict[str, Any]] | None = None,
 ) -> str:
+    if messages is None:
+        messages = []
 
-    messages: list[dict[str, Any]] = [{"role": "user", "content": message}]
-
+    messages.append({"role": "user", "content": message})
     for _ in range(max_steps):
         reply = model(messages, ctx.tool_schemas())
 
         if reply["type"] == "answer":
+            messages.append({"role": "assistant", "content": reply["content"]})
             return reply["content"]
 
         name = reply["name"]
         args = reply["args"]
         call_id = reply["id"]
-
+        ctx.logger.info(f"tool call: {name} {args}")
         messages.append(
             {
                 "role": "assistant",
@@ -43,6 +46,7 @@ def run(
         )
 
         result = ctx.call_tool(name, **args)
+        ctx.logger.info(f"tool result {result}")
         messages.append(
             {
                 "role": "tool",

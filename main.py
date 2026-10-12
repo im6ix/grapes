@@ -2,17 +2,17 @@ import asyncio
 
 from grapes import Harness
 from grapes.plugins import calculator_plugin
+from grapes.agent.chat import Chat
+from grapes.agent.model import model
 
 
 async def main() -> None:
     h = Harness()
     ctx = h.create_context()
-    calculator_plugin(ctx)
+    await ctx.use(calculator_plugin)
 
-    print(ctx._harness.tools["add"].func(3, 5))
-    await ctx.undo()
-    print(ctx._harness.tools)
+    chat = Chat(ctx, model)
+    print(chat.say("use the multiply tool to work out 113 * 977."))
 
 
-if __name__ == "__main__":
-    asyncio.run(main())
+asyncio.run(main())
