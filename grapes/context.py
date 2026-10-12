@@ -51,8 +51,10 @@ class Context:
 
         def teardown() -> None:
             self._harness.tools.pop(name, None)
+            self.logger.info(f"removed tool: {name}")
 
         self.effect(setup, teardown)
+        self.logger.info(f"registered tool: {name}")
 
     def call_tool(self, name: str, *args: object, **kwargs: object) -> object:
         return self._harness.tools[name].func(*args, **kwargs)
