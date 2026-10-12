@@ -45,19 +45,6 @@ import pathlib
 
 URL = "https://opencode.ai/zen/go/v1/chat/completions"
 
-ADD_TOOL = {
-    "type": "function",
-    "function": {
-        "name": "add",
-        "description": "Add two integers",
-        "parameters": {
-            "type": "object",
-            "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}},
-            "required": ["a", "b"],
-        },
-    },
-}
-
 
 def _api_key() -> str:
     auth = pathlib.Path.home() / ".local/share/opencode/auth.json"
@@ -107,5 +94,5 @@ def _reply_from(message: dict) -> dict:
     }
 
 
-def model(messages: list[dict]) -> dict:
-    return _reply_from(_chat(messages, tools=[ADD_TOOL]))
+def model(messages: list[dict], tools: list[dict[str, object]]) -> dict:
+    return _reply_from(_chat(messages, tools=tools))

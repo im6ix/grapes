@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 def run(
     ctx: Context,
-    model: Callable[[list[dict[str, Any]]]],
+    model: Callable[[list[dict[str, Any]], list[dict[str, object]]], dict],
     message: str,
     max_steps: int = 10,
 ) -> str:
@@ -19,7 +19,7 @@ def run(
     messages: list[dict[str, Any]] = [{"role": "user", "content": message}]
 
     for _ in range(max_steps):
-        reply = model(messages)
+        reply = model(messages, ctx.tool_schemas())
 
         if reply["type"] == "answer":
             return reply["content"]
@@ -28,20 +28,26 @@ def run(
         args = reply["args"]
         call_id = reply["id"]
 
-        messages.append({
-            "role": "assistant",
-            "content": "",
-            "tool_calls": [{
-                "id": call_id,
-                "type": "function",
-                "function": {"name": name, "arguments": json.dumps(args)},
-            }],
-        })
+        messages.append(
+            {
+                "role": "assistant",
+                "content": "",
+                "tool_calls": [
+                    {
+                        "id": call_id,
+                        "type": "function",
+                        "function": {"name": name, "arguments": json.dumps(args)},
+                    }
+                ],
+            }
+        )
 
         result = ctx.call_tool(name, **args)
-        messages.append({
-            "role": "tool",
-            "tool_call_id": call_id,
-            "content": str(result),
-        })
+        messages.append(
+            {
+                "role": "tool",
+                "tool_call_id": call_id,
+                "content": str(result),
+            }
+        )
     raise RuntimeError("too many steps")

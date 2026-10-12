@@ -16,9 +16,47 @@ def test_loop_runs_a_tool_then_answers():
         },
     )
 
-    def fake_model(messages):
+    def fake_model(messages, tools):
         if any(m["role"] == "tool" for m in messages):
             return {"type": "answer", "content": messages[-1]["content"]}
         return {"type": "tool", "id": "call_1", "name": "add", "args": {"a": 2, "b": 2}}
 
     assert run(ctx, fake_model, "what is 2+2") == "4"
+
+
+def test_loop_passes_tool_schemas_to_the_model():
+    h = Harness()
+    ctx = h.create_context()
+    ctx.register_tool(
+        "add",
+        lambda a, b: a + b,
+        description="Add two integers",
+        parameters={
+            "type": "object",
+            "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}},
+            "required": ["a", "b"],
+        },
+    )
+
+    received = None
+
+    def fake_model(messages, tools):
+        nonlocal received
+        received = tools
+        return {"type": "answer", "content": "done"}
+
+    run(ctx, fake_model, "hi")
+    assert received == [
+        {
+            "type": "function",
+            "function": {
+                "name": "add",
+                "description": "Add two integers",
+                "parameters": {
+                    "type": "object",
+                    "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}},
+                    "required": ["a", "b"],
+                },
+            },
+        }
+    ]
