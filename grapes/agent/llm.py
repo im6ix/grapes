@@ -1,12 +1,11 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Callable
-
+from typing import TYPE_CHECKING, Callable, Awaitable
 from ..service import Service
 
 if TYPE_CHECKING:
     from ..context import Context, Disposer
 
-Adapter = Callable[[list[dict]], dict]
+Adapter = Callable[[list[dict], list[dict]], Awaitable[dict]]
 
 
 class Llm(Service):
@@ -23,10 +22,10 @@ class Llm(Service):
 
         return ctx.effect(setup, teardown)
 
-    def chat(self, message: list[dict]) -> dict:
+    async def chat(self, message: list[dict], tools: list[dict]) -> dict:
         if self._adapter is None:
             raise RuntimeError("no llm adapter register")
-        return self._adapter(message)
+        return await self._adapter(message, tools)
 
 
 def llm_plugin(ctx: Context) -> None:

@@ -28,9 +28,12 @@ async def test_chat_delegates_to_the_registered_adapter():
     llm = ctx.get("llm")
     assert isinstance(llm, Llm)
 
-    llm.register(ctx, lambda messages: {"type": "answer", "content": "hi"})
+    async def fake_message(messages, tools):
+        return {"type": "answer", "content": "hi"}
 
-    assert llm.chat([]) == {"type": "answer", "content": "hi"}
+    llm.register(ctx, fake_message)
+
+    assert await llm.chat([], []) == {"type": "answer", "content": "hi"}
 
 
 async def test_unregistering_clears_the_adapter():
@@ -40,7 +43,10 @@ async def test_unregistering_clears_the_adapter():
     llm = ctx.get("llm")
     assert isinstance(llm, Llm)
 
-    remove = llm.register(ctx, lambda messages: {"type": "answer", "content": "hi"})
+    async def fake_message(messages, tools):
+        return {"type": "answer", "content": "hi"}
+
+    remove = llm.register(ctx, fake_message)
     await remove()
 
     assert llm._adapter is None

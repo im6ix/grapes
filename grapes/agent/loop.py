@@ -1,17 +1,18 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Any, Callable
+from typing import TYPE_CHECKING, Any
 
 
 import json
+
+from .llm import Llm
 
 
 if TYPE_CHECKING:
     from ..context import Context
 
 
-def run(
+async def run(
     ctx: Context,
-    model: Callable[[list[dict[str, Any]], list[dict[str, object]]], dict],
     message: str,
     max_steps: int = 10,
     messages: list[dict[str, Any]] | None = None,
@@ -19,10 +20,12 @@ def run(
     if messages is None:
         messages = []
 
+    llm = ctx.get("llm")
+    if not isinstance(llm, Llm):
+        raise TypeError("no llm mounted")
     messages.append({"role": "user", "content": message})
     for _ in range(max_steps):
-        reply = model(messages, ctx.tool_schemas())
-
+        reply = await llm.chat(messages, ctx.tool_schemas())
         if reply["type"] == "answer":
             messages.append({"role": "assistant", "content": reply["content"]})
             return reply["content"]

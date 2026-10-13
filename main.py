@@ -5,15 +5,18 @@ import json
 from grapes import Harness
 from grapes.plugins import calculator_plugin
 from grapes.agent.chat import Chat
-from grapes.agent.model import model
+from grapes.agent.model import model_plugin
+from grapes.agent.llm import llm_plugin
 
 
 async def main() -> None:
     h = Harness()
     ctx = h.create_context()
     await ctx.use(calculator_plugin)
+    await ctx.use(llm_plugin)
+    await ctx.use(model_plugin, inject=["llm"])
 
-    chat = Chat(ctx, model)
+    chat = Chat(ctx)
     print("grapes chat - 'quit' or Ctrl-D to exit")
     try:
         while True:
@@ -24,7 +27,7 @@ async def main() -> None:
             if not line or line in {"quit", "exit"}:
                 break
             start = time.monotonic()
-            answer = chat.say(line)
+            answer = await chat.say(line)
             print(
                 f"{answer}        [{time.monotonic() - start:.1f}s, {len(json.dumps(chat.messages)) // 4} tok]"
             )

@@ -38,10 +38,14 @@ Peel one layer at a time, left to right:
     ...["content"]            -> str
 """
 
+import asyncio
 import json
 import urllib.request
 import uuid
 import pathlib
+
+from .llm import Llm
+from ..context import Context
 
 URL = "https://opencode.ai/zen/go/v1/chat/completions"
 
@@ -94,5 +98,12 @@ def _reply_from(message: dict) -> dict:
     }
 
 
-def model(messages: list[dict], tools: list[dict[str, object]]) -> dict:
-    return _reply_from(_chat(messages, tools=tools))
+async def model(messages: list[dict], tools: list[dict[str, object]]) -> dict:
+    return _reply_from(await asyncio.to_thread(_chat, messages, tools=tools))
+
+
+def model_plugin(ctx: Context) -> None:
+    llm = ctx.get("llm")
+    if not isinstance(llm, Llm):
+        raise TypeError("no llm service")
+    llm.register(ctx, model)
