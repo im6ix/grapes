@@ -22,10 +22,10 @@ class Llm(Service):
 
         return ctx.effect(setup, teardown)
 
-    async def chat(self, message: list[dict], tools: list[dict]) -> dict:
+    async def chat(self, messages: list[dict], tools: list[dict]) -> dict:
         if self._adapter is None:
             raise RuntimeError("no llm adapter register")
-        return await self._adapter(message, tools)
+        return await self._adapter(messages, tools)
 
 
 def llm_plugin(ctx: Context) -> None:
