@@ -43,6 +43,8 @@ import json
 import urllib.request
 import uuid
 import pathlib
+import os
+import sqlite3
 
 from .llm import Llm
 from ..context import Context
@@ -51,8 +53,29 @@ URL = "https://opencode.ai/zen/go/v1/chat/completions"
 
 
 def _api_key() -> str:
+    key = os.environ.get("OPENCODE_API_KEY")
+    if key:
+        return key
+
     auth = pathlib.Path.home() / ".local/share/opencode/auth.json"
-    return json.loads(auth.read_text())["opencode-go"]["key"]
+    if auth.exists():
+        return json.loads(auth.read_text())["opencode-go"]["key"]
+
+    # OpenCode migrated credentials from auth.json into its sqlite database.
+    db = pathlib.Path.home() / ".local/share/opencode/opencode.db"
+    if db.exists():
+        con = sqlite3.connect(f"file:{db}?mode=ro", uri=True)
+        try:
+            row = con.execute(
+                "select value from credential "
+                "where active = 1 and integration_id = 'opencode-go'"
+            ).fetchone()
+        finally:
+            con.close()
+        if row:
+            return json.loads(row[0])["key"]
+
+    raise RuntimeError("no opencode-go key: set OPENCODE_API_KEY")
 
 
 def _chat(
