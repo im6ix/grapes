@@ -21,12 +21,13 @@ class Harness:
     def create_context(self) -> Context:
         return Context(self)
 
-    async def settle(self) -> None:
+    async def wait_until_idle(self) -> None:
         # Keep waiting as long as any fiber has a task in flight.
-        # A finished transition can chain another one (_settle -> _drive),
-        # so we re-check after every gather instead of just once.
+        # A finished transition can chain another one
+        # (_transition_done -> _start_transition), so we re-check after every
+        # gather instead of just once.
         while True:
-            tasks = [f.inertia for f in self.registry.fibers if f.inertia is not None]
+            tasks = [f.transition_task for f in self.registry.fibers if f.transition_task is not None]
             if not tasks:
                 return
             await asyncio.gather(*tasks)

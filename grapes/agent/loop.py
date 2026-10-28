@@ -11,7 +11,7 @@ if TYPE_CHECKING:
     from ..context import Context
 
 
-async def run(
+async def run_agent(
     ctx: Context,
     message: str,
     max_steps: int = 10,
@@ -20,12 +20,12 @@ async def run(
     if messages is None:
         messages = []
 
-    llm = ctx.get("llm")
+    llm = ctx.lookup("llm")
     if not isinstance(llm, Llm):
         raise TypeError("no llm mounted")
     messages.append({"role": "user", "content": message})
     for _ in range(max_steps):
-        reply = await llm.chat(messages, ctx.tool_schemas())
+        reply = await llm.complete(messages, ctx.tool_schemas())
         if reply["type"] == "answer":
             messages.append({"role": "assistant", "content": reply["content"]})
             return reply["content"]

@@ -11,10 +11,10 @@ def test_service_register_itself():
             super().__init__(ctx, "greeter")
 
     g = Greeter(ctx)
-    assert ctx.get("greeter") is g
+    assert ctx.lookup("greeter") is g
 
 
-async def test_undo_removes_service():
+async def test_revert_all_removes_service():
     h = Harness()
     ctx = h.create_context()
 
@@ -23,5 +23,5 @@ async def test_undo_removes_service():
             super().__init__(ctx, "greeter")
 
     Greeter(ctx)
-    await ctx.undo()
-    assert ctx.get("greeter") is None
+    await ctx.revert_all()
+    assert ctx.lookup("greeter") is None

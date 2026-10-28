@@ -5,7 +5,7 @@ from typing import TYPE_CHECKING, Any
 if TYPE_CHECKING:
     from ..context import Context
 
-from .loop import run
+from .loop import run_agent
 
 
 class Chat:
@@ -13,5 +13,5 @@ class Chat:
         self.ctx: Context = ctx
         self.messages: list[dict[str, Any]] = []
 
-    async def say(self, message: str) -> str:
-        return await run(self.ctx, message, messages=self.messages)
+    async def ask(self, message: str) -> str:
+        return await run_agent(self.ctx, message, messages=self.messages)

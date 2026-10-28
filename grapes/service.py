@@ -11,4 +11,4 @@ class Service:
         self.ctx = ctx
         self.name = name
 
-        ctx.set(name, self)
+        ctx.provide(name, self)

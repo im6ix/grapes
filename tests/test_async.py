@@ -2,7 +2,7 @@ import asyncio
 from grapes import Harness
 
 
-def test_async_teardown_runs_on_undo():
+def test_async_teardown_runs_on_revert_all():
     log = []
 
     async def teardown() -> None:
@@ -12,7 +12,7 @@ def test_async_teardown_runs_on_undo():
         h = Harness()
         ctx = h.create_context()
         ctx.effect(lambda: log.append("up"), teardown)
-        await ctx.undo()
+        await ctx.revert_all()
 
     asyncio.run(main())
     assert log == ["up", "down"]

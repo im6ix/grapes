@@ -13,7 +13,7 @@ class Llm(Service):
         super().__init__(ctx, "llm")
         self._adapter: Adapter | None = None
 
-    def register(self, ctx: Context, adapter: Adapter) -> Disposer:
+    def register_adapter(self, ctx: Context, adapter: Adapter) -> Disposer:
         def setup() -> None:
             self._adapter = adapter
 
@@ -22,9 +22,9 @@ class Llm(Service):
 
         return ctx.effect(setup, teardown)
 
-    async def chat(self, messages: list[dict], tools: list[dict]) -> dict:
+    async def complete(self, messages: list[dict], tools: list[dict]) -> dict:
         if self._adapter is None:
-            raise RuntimeError("no llm adapter register")
+            raise RuntimeError("no llm adapter registered")
         return await self._adapter(messages, tools)
 
 

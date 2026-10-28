@@ -25,21 +25,26 @@ Two ideas drive the design:
       description, parameters)` stores them (still on top of `effect`), and
       `ctx.tool_schemas()` returns them in the OpenAI function-calling shape.
       Unmounting a plugin removes its schemas automatically.
-- [x] `ctx.use(plugin)` mounts a plugin in its own child context and returns a
-      `dispose`; a parent `ctx.undo()` cascades to its children.
+- [x] `ctx.mount(plugin)` mounts a plugin in its own child context and returns a
+      `dispose`; a parent `ctx.revert_all()` cascades to its children.
 - [x] Spatial composability (basic): a plugin with `inject` keys activates when
-      they are provided and deactivates when they are withdrawn. `ctx.set` /
-      `ctx.get` provide and read values, and `Service` is the base class for
+      they are provided and deactivates when they are withdrawn. `ctx.provide` /
+      `ctx.lookup` provide and read values, and `Service` is the base class for
       providing a capability.
-- [x] Events: `ctx.on(name, handler)` / `ctx.emit(name, ...)`; listeners are
-      revertible effects.
+- [x] Provider identity: every provided value carries a ticket, and a fiber
+      reloads when the ticket for one of its inject keys changes -- even if the
+      new value is equal.
+- [x] Events: `ctx.subscribe(event, handler)` / `ctx.publish(event, ...)`;
+      subscriptions are revertible effects.
 - [x] Logger: `ctx.logger.info / warn / error`.
-- [x] Agent loop: `run(ctx, model, message)` drives model → tool → model until an
-      answer. The model is a plain function, so it can be faked in tests.
+- [x] Agent loop: `run_agent(ctx, message)` drives model → tool → model until an
+      answer. The model is a plain async `(messages, tools) -> reply` function,
+      so it can be faked in tests.
 - [x] Real model: `grapes/agent/model.py` talks to an OpenAI-compatible chat API
-      (opencode-go) and turns tool calls into loop replies, which `run` executes.
-- [ ] The model sees the registered tools: `run` passes `ctx.tool_schemas()` to
-      the model. Until then `grapes/agent/model.py` still hardcodes a single tool.
+      (opencode-go) and turns tool calls into loop replies, which `run_agent`
+      executes.
+- [x] The model sees the registered tools: `run_agent` passes
+      `ctx.tool_schemas()` to the adapter every turn.
 - [ ] Component loader: configuration reconciliation and hot module replacement.
 
 ## Usage
@@ -55,7 +60,7 @@ async def main() -> None:
     h = Harness()
     ctx = h.create_context()
 
-    dispose = await ctx.use(calculator_plugin)   # mount the plugin
+    dispose = await ctx.mount(calculator_plugin)   # mount the plugin
     print(h.tools["add"].func(3, 5))         # 8
 
     await dispose()                              # unload just this plugin
@@ -68,29 +73,52 @@ asyncio.run(main())
 ### An agent that uses a tool
 
 ```python
+import asyncio
+
 from grapes import Harness
-from grapes.agent import run
-from grapes.agent.model import model
+from grapes.agent import run_agent
+from grapes.agent.llm import Llm, llm_plugin
 
-h = Harness()
-ctx = h.create_context()
-ctx.register_tool(
-    "add",
-    lambda a, b: a + b,
-    description="Add two integers",
-    parameters={
-        "type": "object",
-        "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}},
-        "required": ["a", "b"],
-    },
-)
 
-print(run(ctx, model, "Use the add tool to add 2 and 3."))   # 5
+async def fake_model(messages, tools):
+    if any(message["role"] == "tool" for message in messages):
+        return {"type": "answer", "content": messages[-1]["content"]}
+    return {
+        "type": "tool",
+        "id": "call_1",
+        "name": "add",
+        "args": {"a": 2, "b": 3},
+    }
+
+
+async def main() -> None:
+    h = Harness()
+    ctx = h.create_context()
+    ctx.register_tool(
+        "add",
+        lambda a, b: a + b,
+        description="Add two integers",
+        parameters={
+            "type": "object",
+            "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}},
+            "required": ["a", "b"],
+        },
+    )
+
+    await ctx.mount(llm_plugin)
+    llm = ctx.lookup("llm")
+    assert isinstance(llm, Llm)
+    llm.register_adapter(ctx, fake_model)
+
+    print(await run_agent(ctx, "Use the add tool to add 2 and 3."))  # 5
+
+
+asyncio.run(main())
 ```
 
-The model is a plain function (`messages -> reply`), so tests can pass a fake.
-The real one speaks an OpenAI-compatible chat API; the nested wire format is
-confined to `grapes/agent/model.py`.
+The adapter is a plain async `(messages, tools) -> reply` function, so tests can
+pass a fake. The real one speaks an OpenAI-compatible chat API; the nested wire
+format is confined to `grapes/agent/model.py`.
 
 ## Tests
 
@@ -107,13 +135,13 @@ grapes/
   harness.py      # Harness: the shared world (reflect + registry + tools)
   context.py      # Context: a scope; effects + the tool API (register/call/schemas)
   fiber.py        # Fiber: one mounted plugin instance and its lifecycle
-  reflect.py      # Reflect: the value store (provide / get / notify)
+  reflect.py      # Reflect: provider stacks (provide / current_entry / value)
   registry.py     # Registry: the mounted fibers + the mount operation
   service.py      # Service: base class for a plugin that provides a capability
-  events.py       # Events: ctx.on / ctx.emit
+  events.py       # Events: ctx.subscribe / ctx.publish
   logger.py       # Logger: ctx.logger.info / warn / error
   agent/
-    loop.py       # run(): model -> tool -> model, capped by max_steps
+    loop.py       # run_agent(): model -> tool -> model, capped by max_steps
     model.py      # the real model: OpenAI-compatible chat API (opencode-go)
   plugins/        # example plugins (calculator, file_search, greeter)
 tests/            # one test file per concern

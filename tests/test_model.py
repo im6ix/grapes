@@ -49,11 +49,11 @@ async def test_model_forwards_tool_schemas_to_the_wire(monkeypatch: pytest.Monke
 async def test_model_plugin_fills_and_clears_the_slot():
     h = Harness()
     ctx = h.create_context()
-    await ctx.use(llm_plugin)
-    llm = ctx.get("llm")
+    await ctx.mount(llm_plugin)
+    llm = ctx.lookup("llm")
     assert isinstance(llm, Llm)
 
-    dispose = await ctx.use(model_module.model_plugin, inject=["llm"])
+    dispose = await ctx.mount(model_module.model_plugin, inject=["llm"])
     assert llm._adapter is model_module.model
 
     await dispose()

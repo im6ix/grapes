@@ -18,7 +18,7 @@ class Tool:
 
 # A plugin is a function that runs against a context and installs effects on it.
 Plugin = Callable[["Context"], Awaitable[None] | None]
-# An event handler receives whatever `emit` was called with.
+# An event handler receives whatever `publish` was called with.
 Handler = Callable[..., None]
 # A disposer undoes one effect; `effect` returns one.
 Disposer = Callable[[], Awaitable[None]]
@@ -72,7 +72,7 @@ class Context:
             for name, tool in self._harness.tools.items()
         ]
 
-    async def undo(self) -> None:
+    async def revert_all(self) -> None:
         for dispose in reversed(self._effects):
             try:
                 await dispose()
@@ -94,17 +94,17 @@ class Context:
         self._effects.append(dispose)
         return dispose
 
-    async def use(self, plugin: Plugin, inject: list[str] | None = None) -> Disposer:
-        return await self._harness.registry.use(self, plugin, inject)
+    async def mount(self, plugin: Plugin, inject: list[str] | None = None) -> Disposer:
+        return await self._harness.registry.mount(self, plugin, inject)
 
-    def set(self, key: str, value: object) -> Disposer:
-        return self._harness.reflect.provide(self, key, value)
+    def provide(self, name: str, value: object) -> Disposer:
+        return self._harness.reflect.provide(self, name, value)
 
-    def get(self, key: str) -> object | None:
-        return self._harness.reflect.get(key)
+    def lookup(self, name: str) -> object | None:
+        return self._harness.reflect.value(name)
 
-    def on(self, name: str, handler: Handler) -> Disposer:
-        return self._harness.events.on(self, name, handler)
+    def subscribe(self, event: str, handler: Handler) -> Disposer:
+        return self._harness.events.subscribe(self, event, handler)
 
-    def emit(self, name: str, *args: object) -> None:
-        self._harness.events.emit(name, *args)
+    def publish(self, event: str, *args: object) -> None:
+        self._harness.events.publish(event, *args)

@@ -126,7 +126,7 @@ async def model(messages: list[dict], tools: list[dict[str, object]]) -> dict:
 
 
 def model_plugin(ctx: Context) -> None:
-    llm = ctx.get("llm")
+    llm = ctx.lookup("llm")
     if not isinstance(llm, Llm):
         raise TypeError("no llm service")
-    llm.register(ctx, model)
+    llm.register_adapter(ctx, model)

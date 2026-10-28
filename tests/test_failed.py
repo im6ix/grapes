@@ -18,20 +18,20 @@ async def test_plugin_load_drains_effects():
         raise RuntimeError("boom")
 
     with pytest.raises(RuntimeError):
-        await ctx.use(bad_plugin)
+        await ctx.mount(bad_plugin)
 
     assert "half" not in h.tools
     assert h.registry.fibers[0].state is FiberState.FAILED
 
-    await ctx.use(greeter_plugin)
+    await ctx.mount(greeter_plugin)
     assert "greet" in h.tools
 
-    await ctx.undo()
+    await ctx.revert_all()
     assert len(h.registry.fibers) == 0
     assert "greet" not in h.tools
 
 
-async def test_failed_teardown_does_not_block_undo():
+async def test_failed_teardown_does_not_block_revert_all():
     h = Harness()
     ctx = h.create_context()
 
@@ -50,7 +50,7 @@ async def test_failed_teardown_does_not_block_undo():
     ctx.effect(keep, unkeep)
     ctx.effect(doom, boom)
 
-    await ctx.undo()
+    await ctx.revert_all()
     assert "kept" not in h.tools
 
 
@@ -66,7 +66,7 @@ async def test_failed_fiber_stays_failed_on_refresh():
         raise RuntimeError("boom")
 
     with pytest.raises(RuntimeError):
-        await ctx.use(attempt)
+        await ctx.mount(attempt)
 
     fiber = h.registry.fibers[0]
     assert fiber.state is FiberState.FAILED
@@ -74,7 +74,7 @@ async def test_failed_fiber_stays_failed_on_refresh():
 
     fiber.refresh()
     try:
-        await fiber.await_()
+        await fiber.wait_until_settled()
     except RuntimeError:
         pass
 

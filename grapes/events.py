@@ -10,17 +10,17 @@ if TYPE_CHECKING:
 class Events:
     def __init__(self, harness: Harness) -> None:
         self.harness = harness
-        self.listeners: dict[str, list[Handler]] = {}
+        self.subscriptions: dict[str, list[Handler]] = {}
 
-    def on(self, ctx: Context, name: str, handler: Handler) -> Disposer:
+    def subscribe(self, ctx: Context, event: str, handler: Handler) -> Disposer:
         def setup() -> None:
-            self.listeners.setdefault(name, []).append(handler)
+            self.subscriptions.setdefault(event, []).append(handler)
 
         def teardown() -> None:
-            self.listeners[name].remove(handler)
+            self.subscriptions[event].remove(handler)
 
         return ctx.effect(setup, teardown)
 
-    def emit(self, name: str, *args: object) -> None:
-        for handler in self.listeners.get(name, []):
+    def publish(self, event: str, *args: object) -> None:
+        for handler in self.subscriptions.get(event, []):
             handler(*args)

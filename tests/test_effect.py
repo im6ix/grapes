@@ -1,7 +1,7 @@
 from grapes import Harness
 
 
-async def test_undo_removes_the_tool():
+async def test_revert_all_removes_the_tool():
     h = Harness()
     ctx = h.create_context()
     ctx.register_tool(
@@ -14,6 +14,6 @@ async def test_undo_removes_the_tool():
             "required": ["a", "b"],
         },
     )
-    await ctx.undo()
+    await ctx.revert_all()
 
     assert "add" not in h.tools

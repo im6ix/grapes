@@ -1,7 +1,7 @@
 from grapes import Harness
 
 
-def test_register_and_emit():
+def test_subscribe_and_publish():
     h = Harness()
     ctx = h.create_context()
     calls = []
@@ -9,12 +9,12 @@ def test_register_and_emit():
     def handler(value):
         calls.append(value)
 
-    ctx.on("ping", handler)
-    ctx.emit("ping", 1)
+    ctx.subscribe("ping", handler)
+    ctx.publish("ping", 1)
     assert calls == [1]
 
 
-async def test_undo_removes_listener():
+async def test_revert_all_removes_subscription():
     h = Harness()
     ctx = h.create_context()
     calls = []
@@ -22,7 +22,7 @@ async def test_undo_removes_listener():
     def handler(value):
         calls.append(value)
 
-    ctx.on("ping", handler)
-    await ctx.undo()
-    ctx.emit("ping", 1)
+    ctx.subscribe("ping", handler)
+    await ctx.revert_all()
+    ctx.publish("ping", 1)
     assert calls == []

@@ -1,10 +1,10 @@
 from grapes import Harness
 
 
-async def test_set_get_and_undo_value():
+async def test_provide_lookup_and_revert_all_value():
     h = Harness()
     ctx = h.create_context()
-    ctx.set("language", "en")
-    assert ctx.get("language") == "en"
-    await ctx.undo()
-    assert ctx.get("language") is None
+    ctx.provide("language", "en")
+    assert ctx.lookup("language") == "en"
+    await ctx.revert_all()
+    assert ctx.lookup("language") is None
