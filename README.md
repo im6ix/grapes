@@ -1,5 +1,9 @@
 # grapes
 
+[![Python 3.12+](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/)
+[![tests](https://github.com/im6ix/grapes/actions/workflows/tests.yml/badge.svg)](https://github.com/im6ix/grapes/actions/workflows/tests.yml)
+[![Status: experimental](https://img.shields.io/badge/status-experimental-orange)](#status)
+
 A tiny experimental AI harness where **everything is a plugin** — built from
 scratch to understand dynamic composition, inspired by the Cordis paper
 (see [Reference](#reference)).
@@ -16,6 +20,19 @@ Two ideas drive the design:
 - **Temporal composability** — removing a plugin reverts everything it did.
 - **Spatial composability** — plugins declare dependencies and activate /
   deactivate as those dependencies appear and disappear.
+
+## Quick start
+
+Requires Python 3.12+ and [uv](https://docs.astral.sh/uv/).
+
+```bash
+uv sync
+uv run pytest
+uv run python main.py
+```
+
+`main.py` needs an `OPENCODE_API_KEY` (or a credential in OpenCode's local
+store). The tests need neither.
 
 ## Status
 
