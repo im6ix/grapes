@@ -51,6 +51,8 @@ store). The tests need neither.
 - [x] Provider identity: every provided value carries a ticket, and a fiber
       reloads when the ticket for one of its inject keys changes -- even if the
       new value is equal.
+- [x] Committed view: a plugin's teardown sees the injected values it loaded
+      with, even after a provider is removed or replaced.
 - [x] Events: `ctx.subscribe(event, handler)` / `ctx.publish(event, ...)`;
       subscriptions are revertible effects.
 - [x] Logger: `ctx.logger.info / warn / error`.

@@ -56,6 +56,8 @@ class Fiber:
         self.inject = inject or []
         # this fiber's own context; it holds the plugin's effects.
         self.ctx: Context = harness.create_context()
+        # The context points back so lookup can find the committed view.
+        self.ctx.fiber = self
         # where we are now.
         self.state = FiberState.PENDING
         # where we want to be: the ticket for each inject key, in order.
@@ -64,6 +66,10 @@ class Fiber:
         # the tickets the current load was run against.
         # None means "not loaded".
         self.loaded_tickets: tuple[object, ...] | None = None
+        # the inject values this load was run against, by name. Context.lookup
+        # reads these until unload finishes, so teardown sees the world the
+        # plugin was installed in.
+        self.committed: dict[str, object] = {}
         # the running load/unload task, or None when idle. This is the guard.
         self.transition_task: asyncio.Task[None] | None = None
         # once we start leaving, refresh must stop changing wanted_tickets.
@@ -139,10 +145,19 @@ class Fiber:
         wanted_tickets = self._wanted_tickets()
         if wanted_tickets is None:
             self.wanted_tickets = None
+            # Nothing was loaded, so there is nothing to remember.
+            self.committed = {}
             self.state = FiberState.PENDING
             self._transition_done()
             return
         self.wanted_tickets = wanted_tickets
+        # Snapshot the values that go with these tickets. No await has run
+        # since _wanted_tickets(), so the entries are still current.
+        self.committed = {}
+        for name in self.inject:
+            entry = self.harness.reflect.current_entry(name)
+            if entry is not None:
+                self.committed[name] = entry[1]
         self.state = FiberState.LOADING
         try:
             # self.plugin is the function passed to ctx.mount() -- e.g. llm_plugin.
@@ -159,6 +174,8 @@ class Fiber:
             self.state = FiberState.FAILED
             self.loaded_tickets = None
             await self.ctx.revert_all()
+            # The failure teardowns also saw the snapshot.
+            self.committed = {}
             self.transition_task = None
             raise
         # Loaded. Record the tickets this load actually used: the local
@@ -176,6 +193,8 @@ class Fiber:
     async def _unload(self) -> None:
         self.state = FiberState.UNLOADING
         await self.ctx.revert_all()
+        # Teardowns saw the snapshot; it is no longer the current load.
+        self.committed = {}
         self.loaded_tickets = None
         self.state = FiberState.PENDING
         self._transition_done()

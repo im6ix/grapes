@@ -5,6 +5,7 @@ from dataclasses import dataclass
 import inspect
 
 if TYPE_CHECKING:
+    from .fiber import Fiber
     from .harness import Harness
 
 
@@ -35,6 +36,8 @@ class Context:
         self._harness = harness
         self._effects: list[Disposer] = []
         self.logger = harness.logger
+        # The fiber this context belongs to, or None for a top-level context.
+        self.fiber: Fiber | None = None
 
     def register_tool(
         self,
@@ -101,6 +104,10 @@ class Context:
         return self._harness.reflect.provide(self, name, value)
 
     def lookup(self, name: str) -> object | None:
+        # A fiber reads the dependency values it loaded with, not whatever is
+        # live now. This is what lets teardown see the world it was installed in.
+        if self.fiber is not None and name in self.fiber.committed:
+            return self.fiber.committed[name]
         return self._harness.reflect.value(name)
 
     def subscribe(self, event: str, handler: Handler) -> Disposer:
