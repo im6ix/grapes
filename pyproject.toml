@@ -3,6 +3,8 @@ name = "grapes"
 version = "0.8.0"
 description = "A tiny plugin-based AI agent harness built from scratch in Python."
 readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.12"
 dependencies = []
 keywords = [

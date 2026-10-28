@@ -171,3 +171,7 @@ main.py           # scratch entry point
 The design follows *A Programming Paradigm for Spatiotemporal Composability*
 (Shi, Zhang, Cui; Peking University / DeepSeek-AI), which implements these
 ideas in a meta-framework called Cordis.
+
+## License
+
+MIT. See [LICENSE](LICENSE).
