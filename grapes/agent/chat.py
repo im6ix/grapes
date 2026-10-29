@@ -4,14 +4,22 @@ from typing import TYPE_CHECKING, Any
 
 if TYPE_CHECKING:
     from ..context import Context
+    from .session import Session
 
 from .loop import run_agent
 
 
 class Chat:
-    def __init__(self, ctx: Context) -> None:
+    def __init__(self, ctx: Context, session: Session) -> None:
         self.ctx: Context = ctx
-        self.messages: list[dict[str, Any]] = []
+        self.session: Session = session
+        self.messages = session.messages()
 
     async def ask(self, message: str) -> str:
-        return await run_agent(self.ctx, message, messages=self.messages)
+        before = len(self.messages)
+        answer = await run_agent(self.ctx, message, messages=self.messages)
+
+        for entry in self.messages[before:]:
+            self.session.append("message", entry)
+
+        return answer

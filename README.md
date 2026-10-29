@@ -64,6 +64,10 @@ store). The tests need neither.
       executes.
 - [x] The model sees the registered tools: `run_agent` passes
       `ctx.tool_schemas()` to the adapter every turn.
+- [x] Sessions: transcripts are append-only JSONL files under
+      `~/.local/share/grapes/sessions/`; `Chat` saves each turn, and the REPL has
+      `/sessions`, `/resume`, and `/new`.
+- [ ] Compaction: summarize older history so long sessions keep working.
 - [ ] Component loader: configuration reconciliation and hot module replacement.
 
 ## Usage
@@ -162,6 +166,9 @@ grapes/
   agent/
     loop.py       # run_agent(): model -> tool -> model, capped by max_steps
     model.py      # the real model: OpenAI-compatible chat API (opencode-go)
+    llm.py        # Llm service + llm_plugin adapter registration
+    chat.py       # Chat: transcript + turn persistence
+    session.py    # SessionStore + Session: append-only JSONL transcripts
   plugins/        # example plugins (calculator, file_search, greeter)
 tests/            # one test file per concern
 docs/             # the reference paper
