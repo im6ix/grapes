@@ -1,7 +1,7 @@
 import asyncio
 import time
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 
 from grapes import Harness
 from grapes.plugins import calculator_plugin
@@ -32,7 +32,7 @@ async def main() -> None:
                 break
             if line == "/sessions":
                 for header in store.list():
-                    stamp = datetime.fromtimestamp(header["created_at"] / 1000)
+                    stamp = datetime.fromtimestamp(header["created_at"] / 1000, tz=UTC).astimezone()
                     marker = "*" if header["id"] == session.id else " "
                     print(f"{marker} {header['id']} {stamp:%Y-%m-%d %H:%M}")
                 continue
