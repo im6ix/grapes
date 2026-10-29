@@ -3,6 +3,14 @@ import os
 import time
 import uuid
 from pathlib import Path
+from typing import TypedDict
+
+
+class SessionHeader(TypedDict):
+    type: str
+    version: int
+    id: str
+    created_at: int
 
 
 def default_sessions_dir() -> Path:
@@ -12,7 +20,7 @@ def default_sessions_dir() -> Path:
 
 
 class Session:
-    def __init__(self, path: Path, header: dict, entries: list[dict] | None = None) -> None:
+    def __init__(self, path: Path, header: SessionHeader, entries: list[dict] | None = None) -> None:
         self.path = path
         self.header = header
         self.entries: list[dict] = entries if entries is not None else []
@@ -59,7 +67,7 @@ class SessionStore:
     def create(self) -> Session:
         session_id = f"ses_{uuid.uuid4().hex[:12]}"
         path = self.root / f"{session_id}.jsonl"
-        header = {
+        header: SessionHeader = {
             "type": "session",
             "version": 1,
             "id": session_id,
@@ -71,12 +79,12 @@ class SessionStore:
     def open(self, session_id: str) -> Session:
         path = self.root / f"{session_id}.jsonl"
         with path.open() as file:
-            header = json.loads(file.readline())
+            header: SessionHeader = json.loads(file.readline())
             entries = [json.loads(line) for line in file if line.strip()]
         return Session(path, header, entries)
 
-    def list(self) -> list[dict]:
-        sessions: list[dict] = []
+    def list(self) -> list[SessionHeader]:
+        sessions: list[SessionHeader] = []
 
         for path in self.root.glob("*.jsonl"):
             with path.open() as file:
