@@ -4,6 +4,7 @@ Pytest calls this hook for every test function. If the test is a coroutine
 function, we run it ourselves with asyncio.run and return True to tell pytest
 "handled". Sync tests fall through (return None) and run normally.
 """
+
 from typing import Any
 
 
@@ -13,6 +14,10 @@ def pytest_pyfunc_call(pyfuncitem: Any) -> bool | None:
 
     test = pyfuncitem.obj
     if inspect.iscoroutinefunction(test):
-        asyncio.run(test(**pyfuncitem.funcargs))
+        params = inspect.signature(test).parameters
+        kwargs = {
+            name: value for name, value in pyfuncitem.funcargs.items() if name in params
+        }
+        asyncio.run(test(**kwargs))
         return True
     return None
