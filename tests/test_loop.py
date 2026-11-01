@@ -71,3 +71,76 @@ async def test_loop_passes_tool_schemas_to_the_model():
             },
         }
     ]
+
+
+async def test_loop_reports_tool_errors_to_the_model():
+    h = Harness()
+    ctx = h.create_context()
+
+    def explode():
+        raise ValueError("bad input")
+
+    ctx.register_tool(
+        "explode",
+        explode,
+        description="Always fails",
+        parameters={"type": "object", "properties": {}},
+    )
+
+    seen_tool = []
+
+    async def fake_model(messages, tools):
+        if any(message["role"] == "tool" for message in messages):
+            seen_tool.append(messages[-1])
+            return {"type": "answer", "content": "saw error"}
+        return {"type": "tool", "id": "call_1", "name": "explode", "args": {}}
+
+    await ctx.mount(llm_plugin)
+    llm = ctx.lookup("llm")
+    assert isinstance(llm, Llm)
+    llm.register_adapter(ctx, fake_model)
+
+    assert await run_agent(ctx, "try it") == "saw error"
+    assert seen_tool == [
+        {
+            "role": "tool",
+            "tool_call_id": "call_1",
+            "content": "ERROR: ValueError: bad input",
+        }
+    ]
+
+
+async def test_loop_awaits_async_tools():
+    h = Harness()
+    ctx = h.create_context()
+
+    async def async_add(a, b):
+        return a + b
+
+    ctx.register_tool(
+        "async_add",
+        async_add,
+        description="Add two integers asynchronously",
+        parameters={
+            "type": "object",
+            "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}},
+            "required": ["a", "b"],
+        },
+    )
+
+    async def fake_model(messages, tools):
+        if any(message["role"] == "tool" for message in messages):
+            return {"type": "answer", "content": messages[-1]["content"]}
+        return {
+            "type": "tool",
+            "id": "call_1",
+            "name": "async_add",
+            "args": {"a": 2, "b": 3},
+        }
+
+    await ctx.mount(llm_plugin)
+    llm = ctx.lookup("llm")
+    assert isinstance(llm, Llm)
+    llm.register_adapter(ctx, fake_model)
+
+    assert await run_agent(ctx, "add 2 and 3") == "5"
