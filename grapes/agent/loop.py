@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from typing import TYPE_CHECKING, Any
 
-from .llm import Llm
+from grapes.agent.llm import Llm
 
 if TYPE_CHECKING:
     from ..context import Context
@@ -46,13 +46,24 @@ async def run_agent(
             }
         )
 
-        result = ctx.call_tool(name, **args)
-        ctx.logger.info(f"tool result {result}")
-        messages.append(
-            {
-                "role": "tool",
-                "tool_call_id": call_id,
-                "content": str(result),
-            }
-        )
+        try:
+            result = await ctx.call_tool(name, **args)
+            ctx.logger.info(f"tool result {result}")
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": call_id,
+                    "content": str(result),
+                }
+            )
+        except Exception as error:
+            error_message = f"ERROR: {type(error).__name__}: {error}"
+            ctx.logger.error(error_message)
+            messages.append(
+                {
+                    "role": "tool",
+                    "tool_call_id": call_id,
+                    "content": error_message,
+                }
+            )
     raise RuntimeError("too many steps")

@@ -60,8 +60,12 @@ class Context:
         self.effect(setup, teardown)
         self.logger.info(f"registered tool: {name}")
 
-    def call_tool(self, name: str, *args: object, **kwargs: object) -> object:
-        return self._harness.tools[name].func(*args, **kwargs)
+    async def call_tool(self, name: str, *args: object, **kwargs: object) -> object:
+        result = self._harness.tools[name].func(*args, **kwargs)
+        if inspect.isawaitable(result):
+            return await result
+
+        return result
 
     def tool_schemas(self) -> list[dict[str, object]]:
         return [
