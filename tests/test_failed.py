@@ -1,8 +1,18 @@
 import pytest
 
 from grapes import Harness
+from grapes.context import Tool
 from grapes.fiber import FiberState
 from grapes.plugins import greeter_plugin
+
+
+def make_tool(name: str) -> Tool:
+    return Tool(
+        name,
+        name,
+        {"type": "object", "properties": {}},
+        lambda: name,
+    )
 
 
 async def test_plugin_load_drains_effects():
@@ -37,13 +47,13 @@ async def test_failed_teardown_does_not_block_revert_all():
     ctx = h.create_context()
 
     def keep() -> None:
-        h.tools["kepts"] = lambda: "kept"
+        h.tools["kept"] = make_tool("kept")
 
     def unkeep() -> None:
         h.tools.pop("kept")
 
     def doom() -> None:
-        h.tools["doomed"] = lambda: "doomed"
+        h.tools["doomed"] = make_tool("doomed")
 
     def boom() -> None:
         raise RuntimeError("teardown boom")
