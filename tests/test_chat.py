@@ -1,15 +1,10 @@
-from grapes import Harness
 from grapes.agent.chat import Chat
-from grapes.agent.llm import Llm, llm_plugin
 from grapes.agent.session import SessionStore
 
 
-async def test_chat_persists_and_replays_a_turn(tmp_path):
+async def test_chat_persists_and_replays_a_turn(tmp_path, ctx, mount_llm):
     store = SessionStore(tmp_path)
     session = store.create()
-
-    h = Harness()
-    ctx = h.create_context()
 
     seen = []
 
@@ -17,10 +12,7 @@ async def test_chat_persists_and_replays_a_turn(tmp_path):
         seen.append([message["role"] for message in messages])
         return {"type": "answer", "content": "ok"}
 
-    await ctx.mount(llm_plugin)
-    llm = ctx.lookup("llm")
-    assert isinstance(llm, Llm)
-    llm.register_adapter(ctx, fake_model)
+    await mount_llm(ctx, fake_model)
 
     chat = Chat(ctx, session)
     assert await chat.ask("first") == "ok"
@@ -41,21 +33,15 @@ async def test_chat_persists_and_replays_a_turn(tmp_path):
     assert final.entries[2]["parent_id"] == "e2"
 
 
-async def test_chat_persists_a_tool_turn(tmp_path):
+async def test_chat_persists_a_tool_turn(tmp_path, ctx, mount_llm, two_ints):
     store = SessionStore(tmp_path)
     session = store.create()
 
-    h = Harness()
-    ctx = h.create_context()
     ctx.register_tool(
         "add",
         lambda a, b: a + b,
         description="Add two integers",
-        parameters={
-            "type": "object",
-            "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}},
-            "required": ["a", "b"],
-        },
+        parameters=two_ints,
     )
 
     async def fake_model(messages, tools):
@@ -63,10 +49,7 @@ async def test_chat_persists_a_tool_turn(tmp_path):
             return {"type": "answer", "content": messages[-1]["content"]}
         return {"type": "tool", "id": "call_1", "name": "add", "args": {"a": 2, "b": 3}}
 
-    await ctx.mount(llm_plugin)
-    llm = ctx.lookup("llm")
-    assert isinstance(llm, Llm)
-    llm.register_adapter(ctx, fake_model)
+    await mount_llm(ctx, fake_model)
 
     chat = Chat(ctx, session)
     assert await chat.ask("add 2 and 3") == "5"

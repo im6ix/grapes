@@ -1,10 +1,4 @@
-from grapes import Harness
-
-
-async def test_two_providers_one_key():
-    h = Harness()
-    ctx = h.create_context()
-
+async def test_two_providers_one_key(ctx):
     d1 = ctx.provide("language", "en")
     d2 = ctx.provide("language", "fr")
 
@@ -15,9 +9,7 @@ async def test_two_providers_one_key():
     assert ctx.lookup("language") is None
 
 
-async def test_replacing_a_provider_reloads_the_consumer():
-    h = Harness()
-    ctx = h.create_context()
+async def test_replacing_a_provider_reloads_the_consumer(h, ctx):
     log = []
 
     def consumer(ctx):
@@ -36,9 +28,7 @@ async def test_replacing_a_provider_reloads_the_consumer():
     assert log == [("load", 1), ("unload", 1), ("load", 1)]
 
 
-async def test_current_entry_returns_the_newest_provider():
-    h = Harness()
-    ctx = h.create_context()
+async def test_current_entry_returns_the_newest_provider(h, ctx):
     assert h.reflect.current_entry("x") is None
     ctx.provide("x", 1)
     first = h.reflect.current_entry("x")
@@ -49,10 +39,7 @@ async def test_current_entry_returns_the_newest_provider():
     assert second[1] == 2 and second[0] != first[0]
 
 
-async def test_teardown_sees_the_value_it_loaded_with():
-    h = Harness()
-    ctx = h.create_context()
-
+async def test_teardown_sees_the_value_it_loaded_with(h, ctx):
     seen = []
 
     def consumer(c):
@@ -70,9 +57,7 @@ async def test_teardown_sees_the_value_it_loaded_with():
     assert seen == [1]
 
 
-async def test_replacement_teardown_sees_the_old_value():
-    h = Harness()
-    ctx = h.create_context()
+async def test_replacement_teardown_sees_the_old_value(h, ctx):
     log = []
 
     def consumer(ctx):

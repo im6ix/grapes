@@ -1,9 +1,4 @@
-from grapes import Harness
-
-
-def test_subscribe_and_publish():
-    h = Harness()
-    ctx = h.create_context()
+def test_subscribe_and_publish(ctx):
     calls = []
 
     def handler(value):
@@ -14,9 +9,7 @@ def test_subscribe_and_publish():
     assert calls == [1]
 
 
-async def test_revert_all_removes_subscription():
-    h = Harness()
-    ctx = h.create_context()
+async def test_revert_all_removes_subscription(ctx):
     calls = []
 
     def handler(value):

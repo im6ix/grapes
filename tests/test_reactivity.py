@@ -1,9 +1,7 @@
-from grapes import Harness
 from grapes.plugins import calculator_plugin, file_search_plugin, greeter_plugin
 
 
-async def test_two_contexts():
-    h = Harness()
+async def test_two_contexts(h):
     ctx_a = h.create_context()
     calculator_plugin(ctx_a)
     ctx_b = h.create_context()
@@ -14,32 +12,24 @@ async def test_two_contexts():
     assert "search_file" in h.tools
 
 
-async def test_plugin_dependency_missing():
-    h = Harness()
-    ctx = h.create_context()
+async def test_plugin_dependency_missing(h, ctx):
     await ctx.mount(greeter_plugin, inject=["language"])
     assert "greet" not in h.tools
 
 
-async def test_plugin_dependency_present():
-    h = Harness()
-    ctx = h.create_context()
+async def test_plugin_dependency_present(h, ctx):
     ctx.provide("language", "en")
     await ctx.mount(greeter_plugin, inject=["language"])
     assert "greet" in h.tools
 
 
-async def test_dependency_satisfied_by_falsy_value():
-    h = Harness()
-    ctx = h.create_context()
+async def test_dependency_satisfied_by_falsy_value(h, ctx):
     ctx.provide("language", "")
     await ctx.mount(greeter_plugin, inject=["language"])
     assert "greet" in h.tools
 
 
-async def test_activate_automatically():
-    h = Harness()
-    ctx = h.create_context()
+async def test_activate_automatically(h, ctx):
     await ctx.mount(greeter_plugin, inject=["language"])
     assert "greet" not in h.tools
 
@@ -48,9 +38,7 @@ async def test_activate_automatically():
     assert "greet" in h.tools
 
 
-async def test_deactivation_when_value_removed():
-    h = Harness()
-    ctx = h.create_context()
+async def test_deactivation_when_value_removed(h, ctx):
     await ctx.mount(greeter_plugin, inject=["language"])
 
     remove = ctx.provide("language", "en")

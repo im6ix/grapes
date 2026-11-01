@@ -1,7 +1,6 @@
 import pytest
 
 import grapes.agent.model as model_module
-from grapes import Harness
 from grapes.agent.llm import Llm, llm_plugin
 from grapes.agent.model import _reply_from
 
@@ -47,9 +46,7 @@ async def test_model_forwards_tool_schemas_to_the_wire(monkeypatch: pytest.Monke
     assert reply == {"type": "answer", "content": "paris"}
 
 
-async def test_model_plugin_fills_and_clears_the_slot():
-    h = Harness()
-    ctx = h.create_context()
+async def test_model_plugin_fills_and_clears_the_slot(ctx):
     await ctx.mount(llm_plugin)
     llm = ctx.lookup("llm")
     assert isinstance(llm, Llm)

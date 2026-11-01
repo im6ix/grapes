@@ -1,19 +1,9 @@
-from grapes import Harness
-
-
-def test_register_tool_exposes_its_schema():
-    h = Harness()
-    ctx = h.create_context()
-
+def test_register_tool_exposes_its_schema(ctx, two_ints):
     ctx.register_tool(
         "add",
         lambda a, b: a + b,
         description="Add two integers",
-        parameters={
-            "type": "object",
-            "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}},
-            "required": ["a", "b"],
-        },
+        parameters=two_ints,
     )
 
     expected = [
@@ -22,11 +12,7 @@ def test_register_tool_exposes_its_schema():
             "function": {
                 "name": "add",
                 "description": "Add two integers",
-                "parameters": {
-                    "type": "object",
-                    "properties": {"a": {"type": "integer"}, "b": {"type": "integer"}},
-                    "required": ["a", "b"],
-                },
+                "parameters": two_ints,
             },
         }
     ]

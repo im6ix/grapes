@@ -1,6 +1,5 @@
 import pytest
 
-from grapes import Harness
 from grapes.context import Tool
 from grapes.fiber import FiberState
 from grapes.plugins import greeter_plugin
@@ -15,10 +14,7 @@ def make_tool(name: str) -> Tool:
     )
 
 
-async def test_plugin_load_drains_effects():
-    h = Harness()
-    ctx = h.create_context()
-
+async def test_plugin_load_drains_effects(h, ctx):
     def bad_plugin(ctx) -> None:
         ctx.register_tool(
             "half",
@@ -42,10 +38,7 @@ async def test_plugin_load_drains_effects():
     assert "greet" not in h.tools
 
 
-async def test_failed_teardown_does_not_block_revert_all():
-    h = Harness()
-    ctx = h.create_context()
-
+async def test_failed_teardown_does_not_block_revert_all(h, ctx):
     def keep() -> None:
         h.tools["kept"] = make_tool("kept")
 
@@ -65,10 +58,7 @@ async def test_failed_teardown_does_not_block_revert_all():
     assert "kept" not in h.tools
 
 
-async def test_failed_fiber_stays_failed_on_refresh():
-    h = Harness()
-    ctx = h.create_context()
-
+async def test_failed_fiber_stays_failed_on_refresh(h, ctx):
     calls = 0
 
     def attempt(ctx):

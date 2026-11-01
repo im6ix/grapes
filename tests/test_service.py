@@ -1,11 +1,7 @@
-from grapes import Harness
 from grapes.service import Service
 
 
-def test_service_register_itself():
-    h = Harness()
-    ctx = h.create_context()
-
+def test_service_register_itself(ctx):
     class Greeter(Service):
         def __init__(self, ctx):
             super().__init__(ctx, "greeter")
@@ -14,10 +10,7 @@ def test_service_register_itself():
     assert ctx.lookup("greeter") is g
 
 
-async def test_revert_all_removes_service():
-    h = Harness()
-    ctx = h.create_context()
-
+async def test_revert_all_removes_service(ctx):
     class Greeter(Service):
         def __init__(self, ctx):
             super().__init__(ctx, "greeter")
