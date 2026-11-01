@@ -1,8 +1,9 @@
+import pytest
+
+import grapes.agent.model as model_module
 from grapes import Harness
 from grapes.agent.llm import Llm, llm_plugin
 from grapes.agent.model import _reply_from
-import grapes.agent.model as model_module
-import pytest
 
 
 def test_answer():

@@ -1,11 +1,9 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Any
-
 
 import json
+from typing import TYPE_CHECKING, Any
 
 from .llm import Llm
-
 
 if TYPE_CHECKING:
     from ..context import Context

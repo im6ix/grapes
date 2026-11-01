@@ -40,14 +40,14 @@ Peel one layer at a time, left to right:
 
 import asyncio
 import json
+import os
+import pathlib
+import sqlite3
 import urllib.request
 import uuid
-import pathlib
-import os
-import sqlite3
 
-from .llm import Llm
 from ..context import Context
+from .llm import Llm
 
 URL = "https://opencode.ai/zen/go/v1/chat/completions"
 

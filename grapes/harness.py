@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import asyncio
-from typing import Callable
 
-from .context import Context
+from .context import Context, Tool
 from .events import Events
+from .logger import Logger
 from .reflect import Reflect
 from .registry import Registry
-from .logger import Logger
 
 
 class Harness:
@@ -27,7 +26,11 @@ class Harness:
         # (_transition_done -> _start_transition), so we re-check after every
         # gather instead of just once.
         while True:
-            tasks = [f.transition_task for f in self.registry.fibers if f.transition_task is not None]
+            tasks = [
+                f.transition_task
+                for f in self.registry.fibers
+                if f.transition_task is not None
+            ]
             if not tasks:
                 return
             await asyncio.gather(*tasks)

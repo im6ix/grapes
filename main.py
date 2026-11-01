@@ -1,14 +1,14 @@
 import asyncio
-import time
 import json
+import time
 from datetime import UTC, datetime
 
 from grapes import Harness
-from grapes.plugins import calculator_plugin
 from grapes.agent.chat import Chat
-from grapes.agent.model import model_plugin
 from grapes.agent.llm import llm_plugin
+from grapes.agent.model import model_plugin
 from grapes.agent.session import SessionStore, default_sessions_dir
+from grapes.plugins import calculator_plugin
 
 
 async def main() -> None:
@@ -32,7 +32,9 @@ async def main() -> None:
                 break
             if line == "/sessions":
                 for header in store.list():
-                    stamp = datetime.fromtimestamp(header["created_at"] / 1000, tz=UTC).astimezone()
+                    stamp = datetime.fromtimestamp(
+                        header["created_at"] / 1000, tz=UTC
+                    ).astimezone()
                     marker = "*" if header["id"] == session.id else " "
                     print(f"{marker} {header['id']} {stamp:%Y-%m-%d %H:%M}")
                 continue

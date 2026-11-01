@@ -1,5 +1,8 @@
 from __future__ import annotations
-from typing import TYPE_CHECKING, Callable, Awaitable
+
+from collections.abc import Awaitable, Callable
+from typing import TYPE_CHECKING
+
 from ..service import Service
 
 if TYPE_CHECKING:

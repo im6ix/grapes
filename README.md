@@ -83,11 +83,11 @@ async def main() -> None:
     h = Harness()
     ctx = h.create_context()
 
-    dispose = await ctx.mount(calculator_plugin)   # mount the plugin
-    print(h.tools["add"].func(3, 5))         # 8
+    dispose = await ctx.mount(calculator_plugin)  # mount the plugin
+    print(h.tools["add"].func(3, 5))  # 8
 
-    await dispose()                              # unload just this plugin
-    print(h.tools)                               # {}
+    await dispose()  # unload just this plugin
+    print(h.tools)  # {}
 
 
 asyncio.run(main())

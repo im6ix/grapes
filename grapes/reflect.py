@@ -35,7 +35,6 @@ class Reflect:
     def values(self) -> dict[str, object]:
         return {name: stack[-1][1] for name, stack in self.provider_stacks.items()}
 
-
     # Each provide() call mints a fresh ticket. The entry is
     # (ticket, value): the ticket separates providers even when the values
     # compare equal.

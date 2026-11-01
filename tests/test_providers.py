@@ -24,7 +24,7 @@ async def test_replacing_a_provider_reloads_the_consumer():
         value = ctx.lookup("x")
         ctx.effect(
             lambda: log.append(("load", value)),
-            lambda: log.append(("unload", ctx.lookup("x")))
+            lambda: log.append(("unload", ctx.lookup("x"))),
         )
 
     ctx.provide("x", 1)
@@ -79,7 +79,7 @@ async def test_replacement_teardown_sees_the_old_value():
         value = ctx.lookup("x")
         ctx.effect(
             lambda: log.append(("load", value)),
-            lambda: log.append(("unload", ctx.lookup("x")))
+            lambda: log.append(("unload", ctx.lookup("x"))),
         )
 
     ctx.provide("x", 1)

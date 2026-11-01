@@ -3,7 +3,7 @@ import os
 import time
 import uuid
 from pathlib import Path
-from typing import TypedDict, Any
+from typing import Any, TypedDict
 
 
 class SessionHeader(TypedDict):
@@ -20,7 +20,9 @@ def default_sessions_dir() -> Path:
 
 
 class Session:
-    def __init__(self, path: Path, header: SessionHeader, entries: list[dict] | None = None) -> None:
+    def __init__(
+        self, path: Path, header: SessionHeader, entries: list[dict] | None = None
+    ) -> None:
         self.path = path
         self.header = header
         self.entries: list[dict] = entries if entries is not None else []
@@ -32,7 +34,9 @@ class Session:
     # entry_type is the message type. [session, message, compaction, tool, etc.]
     _UNSET: Any = object()
 
-    def append(self, entry_type: str, data: dict, parent_id: str | None = _UNSET) -> dict:
+    def append(
+        self, entry_type: str, data: dict, parent_id: str | None = _UNSET
+    ) -> dict:
         seq = len(self.entries) + 1
         if parent_id is Session._UNSET:
             parent_id = self.entries[-1]["id"] if self.entries else None

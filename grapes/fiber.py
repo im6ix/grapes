@@ -28,8 +28,6 @@ import inspect
 from enum import Enum, auto
 from typing import TYPE_CHECKING
 
-
-
 if TYPE_CHECKING:
     from .context import Context, Plugin
     from .harness import Harness
