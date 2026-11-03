@@ -2,6 +2,7 @@ import asyncio
 import json
 import time
 from datetime import UTC, datetime
+from pathlib import Path
 
 from grapes import Harness
 from grapes.agent.chat import Chat
@@ -9,12 +10,15 @@ from grapes.agent.llm import llm_plugin
 from grapes.agent.model import model_plugin
 from grapes.agent.session import SessionStore, default_sessions_dir
 from grapes.plugins import calculator_plugin
+from grapes.plugins.workspace import workspace_plugin
 
 
 async def main() -> None:
     h = Harness()
     ctx = h.create_context()
     await ctx.mount(calculator_plugin)
+    await ctx.mount(workspace_plugin(Path.cwd(), make_approver()))
+    print(f"workspace: {Path.cwd()}")
     await ctx.mount(llm_plugin)
     await ctx.mount(model_plugin, inject=["llm"])
     store = SessionStore(default_sessions_dir())
@@ -77,6 +81,31 @@ async def main() -> None:
     finally:
         await ctx.revert_all()
         print("after revert_all, tools left:", ctx.tool_schemas())
+
+
+def make_approver():
+    grants: list[Path] = []
+
+    def approve(path: Path, action: str) -> bool:
+        for grant in grants:
+            if grant == path:
+                return True
+            if grant.is_dir() and path.is_relative_to(grant):
+                return True
+        answer = (
+            input(f"{action} access to {path}? [y] once / [a] always / [n] no:")
+            .strip()
+            .lower()
+        )
+
+        if answer == "y":
+            return True
+        if answer == "a":
+            grants.append(path)
+            return True
+        return False
+
+    return approve
 
 
 asyncio.run(main())
