@@ -50,6 +50,32 @@ from ..context import Context
 from .llm import Llm
 
 URL = "https://opencode.ai/zen/go/v1/chat/completions"
+MODELS_URL = "https://opencode.ai/zen/go/v1/models"
+MODEL = os.environ.get("GRAPES_MODEL", "qwen3.8-flash")
+
+_current_model = MODEL
+
+
+def current_model() -> str:
+    return _current_model
+
+
+def set_model(name: str) -> None:
+    global _current_model
+    _current_model = name
+
+
+def list_models() -> list[str]:
+    req = urllib.request.Request(
+        MODELS_URL,
+        headers={
+            "Authorization": f"Bearer {_api_key()}",
+            "User-Agent": "grapes/0.1",
+        },
+    )
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        data = json.load(resp)
+    return [item["id"] for item in data.get("data", [])]
 
 
 def _api_key() -> str:
@@ -122,7 +148,7 @@ def _reply_from(message: dict) -> dict:
 
 
 async def model(messages: list[dict], tools: list[dict[str, object]]) -> dict:
-    return _reply_from(await asyncio.to_thread(_chat, messages, tools=tools))
+    return _reply_from(await asyncio.to_thread(_chat, messages, current_model(), tools))
 
 
 def model_plugin(ctx: Context) -> None:

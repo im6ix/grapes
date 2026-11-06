@@ -7,7 +7,7 @@ from pathlib import Path
 from grapes import Harness
 from grapes.agent.chat import Chat
 from grapes.agent.llm import llm_plugin
-from grapes.agent.model import model_plugin
+from grapes.agent.model import current_model, list_models, model_plugin, set_model
 from grapes.agent.session import SessionStore, default_sessions_dir
 from grapes.plugins import calculator_plugin
 from grapes.plugins.workspace import workspace_plugin
@@ -25,6 +25,7 @@ async def main() -> None:
     session = store.create()
     chat = Chat(ctx, session)
     print(f"session file: {session.path}")
+    print(f"model: {current_model()}")
     print(f"grapes chat - session {session.id} -'quit' or Ctrl-D to exit")
     try:
         while True:
@@ -34,13 +35,30 @@ async def main() -> None:
                 break
             if not line or line in {"quit", "exit"}:
                 break
+            if line == "/model":
+                try:
+                    models = list_models()
+                except Exception as error:
+                    print("could not list models:", error)
+                    continue
+                chosen = choose(models, "model")
+                if chosen:
+                    set_model(chosen)
+                    print("model:", chosen)
+                continue
+
             if line == "/sessions":
+                choices = []
                 for header in store.list():
                     stamp = datetime.fromtimestamp(
                         header["created_at"] / 1000, tz=UTC
                     ).astimezone()
-                    marker = "*" if header["id"] == session.id else " "
-                    print(f"{marker} {header['id']} {stamp:%Y-%m-%d %H:%M}")
+                    choices.append(f"{header['id']}  {stamp:%Y-%m-%d %H:%M}")
+                chosen = choose(choices, "session")
+                if chosen:
+                    session = store.open(chosen.split()[0])
+                    chat = Chat(ctx, session)
+                    print(f"resumed: {session.id}")
                 continue
 
             if line == "/new":
@@ -68,7 +86,7 @@ async def main() -> None:
                 continue
 
             if line == "/help":
-                print("/sessions | /resume <id> | /new | quit")
+                print("/model | /sessions | /resume <id> | /new | quit")
                 continue
 
             start = time.monotonic()
@@ -81,6 +99,15 @@ async def main() -> None:
     finally:
         await ctx.revert_all()
         print("after revert_all, tools left:", ctx.tool_schemas())
+
+
+def choose(options: list[str], prompt: str) -> str | None:
+    for number, option in enumerate(options, 1):
+        print(f"{number:2}  {option}")
+    answer = input(f"{prompt} number (blank cancels): ").strip()
+    if not answer.isdigit() or not 1 <= int(answer) <= len(options):
+        return None
+    return options[int(answer) - 1]
 
 
 def make_approver():

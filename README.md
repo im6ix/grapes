@@ -67,6 +67,9 @@ store). The tests need neither.
 - [x] Sessions: transcripts are append-only JSONL files under
       `~/.local/share/grapes/sessions/`; `Chat` saves each turn, and the REPL has
       `/sessions`, `/resume`, and `/new`.
+- [x] Sandboxed `read_file`: paths resolve under the launch directory, outside
+      paths ask for approval, and reads are paginated 500 lines at a time.
+- [ ] More workspace tools: `list_dir`, `write_file`, `run_shell`.
 - [ ] Compaction: summarize older history so long sessions keep working.
 - [ ] Component loader: configuration reconciliation and hot module replacement.
 
@@ -169,7 +172,7 @@ grapes/
     llm.py        # Llm service + llm_plugin adapter registration
     chat.py       # Chat: transcript + turn persistence
     session.py    # SessionStore + Session: append-only JSONL transcripts
-  plugins/        # example plugins (calculator, file_search, greeter)
+  plugins/        # calculator, file_search, greeter, workspace
 tests/            # one test file per concern
 docs/             # the reference paper
 main.py           # scratch entry point
