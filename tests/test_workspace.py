@@ -187,3 +187,108 @@ async def test_case_mismatch_is_not_corrected_silently(ctx, tmp_path):
 
     with pytest.raises(FileNotFoundError):
         await ctx.call_tool("read_file", path="Workspace.py")
+
+
+async def test_edit_file_requires_a_read_first(ctx, tmp_path):
+    (tmp_path / "a.txt").write_text("one\n")
+    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+
+    with pytest.raises(PermissionError):
+        await ctx.call_tool("edit_file", path="a.txt", content="two\n")
+
+    assert (tmp_path / "a.txt").read_text() == "one\n"
+
+
+async def test_edit_file_appends_after_read(ctx, tmp_path):
+    (tmp_path / "a.txt").write_text("one\n")
+    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+
+    await ctx.call_tool("read_file", path="a.txt")
+    await ctx.call_tool("edit_file", path="a.txt", content="two\n")
+
+    assert (tmp_path / "a.txt").read_text() == "one\ntwo\n"
+
+
+async def test_edit_file_inserts_before_start_line(ctx, tmp_path):
+    (tmp_path / "a.txt").write_text("one\ntwo\nthree\n")
+    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+    await ctx.call_tool("read_file", path="a.txt")
+
+    await ctx.call_tool("edit_file", path="a.txt", content="NEW\n", start_line=2)
+
+    assert (tmp_path / "a.txt").read_text() == "one\nNEW\ntwo\nthree\n"
+
+
+async def test_edit_file_removes_a_range(ctx, tmp_path):
+    (tmp_path / "a.txt").write_text("one\ntwo\nthree\nfour\n")
+    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+    await ctx.call_tool("read_file", path="a.txt")
+
+    message = await ctx.call_tool("edit_file", path="a.txt", start_line=2, end_line=3)
+
+    assert (tmp_path / "a.txt").read_text() == "one\nfour\n"
+    assert message == "removed 2 lines at 2; file now has 2 lines"
+
+
+async def test_edit_file_replaces_a_range(ctx, tmp_path):
+    (tmp_path / "a.txt").write_text("one\ntwo\nthree\n")
+    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+    await ctx.call_tool("read_file", path="a.txt")
+
+    await ctx.call_tool(
+        "edit_file", path="a.txt", start_line=2, end_line=2, content="X\n"
+    )
+
+    assert (tmp_path / "a.txt").read_text() == "one\nX\nthree\n"
+
+
+async def test_edit_file_appends_at_total_plus_one(ctx, tmp_path):
+    (tmp_path / "a.txt").write_text("one\n")
+    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+    await ctx.call_tool("read_file", path="a.txt")
+
+    await ctx.call_tool("edit_file", path="a.txt", start_line=2, content="two\n")
+
+    assert (tmp_path / "a.txt").read_text() == "one\ntwo\n"
+
+
+@pytest.mark.parametrize(
+    "kwargs",
+    [{"start_line": 0}, {"start_line": 5}, {"start_line": 3, "end_line": 2}],
+)
+async def test_edit_file_rejects_bad_lines(ctx, tmp_path, kwargs):
+    (tmp_path / "a.txt").write_text("one\ntwo\n")
+    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+    await ctx.call_tool("read_file", path="a.txt")
+
+    with pytest.raises(ValueError):
+        await ctx.call_tool("edit_file", path="a.txt", **kwargs)
+
+
+async def test_edit_file_asks_for_write_access(ctx, tmp_path):
+    outside = tmp_path.parent / f"{tmp_path.name}-edit.txt"
+    outside.write_text("one\n")
+    calls = []
+
+    def approve(path, action):
+        calls.append((path, action))
+        return True
+
+    await ctx.mount(workspace_plugin(tmp_path, approve))
+    await ctx.call_tool("read_file", path=str(outside))
+    await ctx.call_tool("edit_file", path=str(outside), content="two\n")
+
+    assert outside.read_text() == "one\ntwo\n"
+    assert calls == [(outside.resolve(), "read"), (outside.resolve(), "write")]
+
+
+async def test_edit_file_guard_does_not_survive_a_remount(ctx, tmp_path):
+    (tmp_path / "a.txt").write_text("one\n")
+    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+    await ctx.call_tool("read_file", path="a.txt")
+
+    await ctx.revert_all()
+    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+
+    with pytest.raises(PermissionError):
+        await ctx.call_tool("edit_file", path="a.txt", content="two\n")

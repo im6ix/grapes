@@ -34,6 +34,29 @@ READ_FILE_SCHEMA = {
     "required": ["path"],
 }
 
+EDIT_FILE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "path": {
+            "type": "string",
+            "description": "File path, relative to workspace root.",
+        },
+        "content": {
+            "type": "string",
+            "description": "Lines to insert. Omit to only remove lines.",
+        },
+        "start_line": {
+            "type": "integer",
+            "description": "Line to insert before, 1-based. Omit to append at the end.",
+        },
+        "end_line": {
+            "type": "integer",
+            "description": "Last line to remove, inclusive. Only used with start_line.",
+        },
+    },
+    "required": ["path"],
+}
+
 
 def resolve_path(root: Path, path: str, approve: Approver, action: str) -> Path:
     target = Path(path)
@@ -121,6 +144,8 @@ def read_file(
     path: str,
     start_line: int = 1,
     end_line: int | None = None,
+    *,
+    seen: set[Path],
 ) -> str:
     target = resolve_path(root, path, approve, "read")
 
@@ -137,6 +162,7 @@ def read_file(
         raise FileNotFoundError(f"not a file: {target}")
 
     lines = target.read_text(encoding="utf-8", errors="replace").splitlines()
+    seen.add(target)
     total = len(lines)
 
     if start_line < 1:
@@ -200,12 +226,14 @@ def workspace_plugin(root: Path, approve: Approver) -> Plugin:
     root = root.resolve()
 
     def plugin(ctx: Context) -> None:
+        seen: set[Path] = set()
+
         def read_file_tool(
             path: str,
             start_line: int = 1,
             end_line: int | None = None,
         ) -> str:
-            return read_file(root, approve, path, start_line, end_line)
+            return read_file(root, approve, path, start_line, end_line, seen=seen)
 
         ctx.register_tool(
             "read_file",
@@ -217,4 +245,77 @@ def workspace_plugin(root: Path, approve: Approver) -> Plugin:
             parameters=READ_FILE_SCHEMA,
         )
 
+        def edit_file_tool(
+            path: str,
+            content: str | None = None,
+            start_line: int | None = None,
+            end_line: int | None = None,
+        ) -> str:
+            return edit_file(root, approve, seen, path, content, start_line, end_line)
+
+        ctx.register_tool(
+            "edit_file",
+            edit_file_tool,
+            description=(
+                "insert or remove lines in a file that was read first; "
+                "omit start_line to append, give start_line and end_line to remove"
+            ),
+            parameters=EDIT_FILE_SCHEMA,
+        )
+
     return plugin
+
+
+def edit_file(
+    root: Path,
+    approve: Approver,
+    seen: set[Path],
+    path: str,
+    content: str | None = None,
+    start_line: int | None = None,
+    end_line: int | None = None,
+) -> str:
+
+    target = resolve_path(root, path, approve, "write")
+
+    if not target.is_file():
+        raise FileNotFoundError(f"not a file: {target}")
+    if target not in seen:
+        raise PermissionError(f"{path} was not read; read it first")
+
+    lines = target.read_text(encoding="utf-8").splitlines()
+
+    if start_line is None:
+        at = len(lines)
+        stop = at
+    else:
+        if start_line < 1:
+            raise ValueError("start_line must be >= 1")
+        at = start_line - 1
+        if at > len(lines):
+            raise ValueError(f"start_line {start_line} is past the end")
+        stop = at
+        if end_line is not None:
+            if end_line < start_line:
+                raise ValueError("end_line must be >= start_line")
+            stop = min(end_line, len(lines))
+
+    lines[at:stop] = (content or "").splitlines()
+    new_text = "\n".join(lines) + "\n" if lines else ""
+
+    target.write_text(new_text, encoding="utf-8")
+
+    added = len((content or "").splitlines())
+    removed = stop - at
+
+    if start_line is None:
+        return f"appended {added} lines; file now has {len(lines)} lines"
+    if removed == 0:
+        return (
+            f"inserted {added} lines at {start_line}; file now has {len(lines)} lines"
+        )
+    if added == 0:
+        return (
+            f"removed {removed} lines at {start_line}; file now has {len(lines)} lines"
+        )
+    return f"replaced {removed} lines with {added} at {start_line}; file now has {len(lines)} lines"
