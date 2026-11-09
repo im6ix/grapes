@@ -69,7 +69,12 @@ store). The tests need neither.
       `/sessions`, `/resume`, and `/new`.
 - [x] Sandboxed `read_file`: paths resolve under the launch directory, outside
       paths ask for approval, and reads are paginated 500 lines at a time.
-- [ ] More workspace tools: `list_dir`, `write_file`, `run_shell`.
+      Listing a directory is part of `read_file` rather than a separate tool.
+- [x] Sandboxed `edit_file`: append, insert before a line, remove a range, or
+      replace a range -- but only in a file that was read first in this session.
+- [ ] `run_shell`: run commands (and create files) with approval, a timeout, and
+      truncated output.
+- [ ] Skills: discover `SKILL.md` files and let the model load them on demand.
 - [ ] Compaction: summarize older history so long sessions keep working.
 - [ ] Component loader: configuration reconciliation and hot module replacement.
 
