@@ -11,6 +11,7 @@ from grapes.agent.model import current_model, list_models, model_plugin, set_mod
 from grapes.agent.session import SessionStore, default_sessions_dir
 from grapes.approval import make_approver
 from grapes.plugins import calculator_plugin
+from grapes.plugins.shell import shell_plugin
 from grapes.plugins.workspace import workspace_plugin
 
 
@@ -19,6 +20,7 @@ async def main() -> None:
     ctx = h.create_context()
     await ctx.mount(calculator_plugin)
     await ctx.mount(workspace_plugin(Path.cwd(), make_approver()))
+    await ctx.mount(shell_plugin(Path.cwd()))
     print(f"workspace: {Path.cwd()}")
     await ctx.mount(llm_plugin)
     await ctx.mount(model_plugin, inject=["llm"])
@@ -109,7 +111,6 @@ def choose(options: list[str], prompt: str) -> str | None:
     if not answer.isdigit() or not 1 <= int(answer) <= len(options):
         return None
     return options[int(answer) - 1]
-
 
 
 asyncio.run(main())
