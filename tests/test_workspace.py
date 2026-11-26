@@ -149,9 +149,7 @@ async def test_list_dir_allows_approved_outside_path(ctx, tmp_path):
     assert result == "x.txt"
     assert calls == [
         Approval(
-            action="read",
-            target=str(outside.resolve()),
-            scope=f"{outside.resolve()}/"
+            action="read", target=str(outside.resolve()), scope=f"{outside.resolve()}/"
         )
     ]
 
@@ -305,6 +303,7 @@ async def test_edit_file_asks_for_write_access(ctx, tmp_path):
             scope=str(outside.resolve()),
         ),
     ]
+
 
 async def test_edit_file_guard_does_not_survive_a_remount(ctx, tmp_path):
     (tmp_path / "a.txt").write_text("one\n")
