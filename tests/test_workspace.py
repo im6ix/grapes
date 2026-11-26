@@ -1,12 +1,13 @@
 import pytest
 
+from grapes.approval import Approval
 from grapes.plugins.workspace import workspace_plugin
 
 
 async def test_read_file_numbers_and_limits_lines(ctx, tmp_path):
     (tmp_path / "hello.txt").write_text("one\ntwo\nthree\n")
 
-    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+    await ctx.mount(workspace_plugin(tmp_path, lambda request: False))
 
     result = await ctx.call_tool(
         "read_file",
@@ -22,7 +23,7 @@ async def test_read_file_denies_outside_path(ctx, tmp_path):
     outside = tmp_path.parent / "outside.txt"
     outside.write_text("secret\n")
 
-    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+    await ctx.mount(workspace_plugin(tmp_path, lambda request: False))
 
     with pytest.raises(PermissionError):
         await ctx.call_tool("read_file", path=str(outside))
@@ -32,7 +33,7 @@ async def test_read_file_defaults_to_500_lines(ctx, tmp_path):
     lines = [f"line {i}" for i in range(1, 502)]
     (tmp_path / "big.txt").write_text("\n".join(lines))
 
-    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+    await ctx.mount(workspace_plugin(tmp_path, lambda request: False))
 
     result = await ctx.call_tool("read_file", path="big.txt")
 
@@ -48,8 +49,8 @@ async def test_read_file_allows_approved_outside_path(ctx, tmp_path):
 
     calls = []
 
-    def approve(path, action):
-        calls.append((path, action))
+    def approve(request):
+        calls.append(request)
         return True
 
     await ctx.mount(workspace_plugin(tmp_path, approve))
@@ -57,13 +58,20 @@ async def test_read_file_allows_approved_outside_path(ctx, tmp_path):
     result = await ctx.call_tool("read_file", path=str(outside))
 
     assert result == "1\tyes"
-    assert calls == [(outside.resolve(), "read")]
+
+    assert calls == [
+        Approval(
+            action="read",
+            target=str(outside.resolve()),
+            scope=str(outside.resolve()),
+        )
+    ]
 
 
 async def test_read_file_rejects_start_line_zero(ctx, tmp_path):
     (tmp_path / "hello.txt").write_text("one\n")
 
-    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+    await ctx.mount(workspace_plugin(tmp_path, lambda request: False))
 
     with pytest.raises(ValueError):
         await ctx.call_tool("read_file", path="hello.txt", start_line=0)
@@ -76,7 +84,7 @@ async def test_list_dir_lists_one_level_dirs_first(ctx, tmp_path):
     (tmp_path / "b.txt").write_text("b\n")
     (tmp_path / "a.txt").write_text("a\n")
 
-    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+    await ctx.mount(workspace_plugin(tmp_path, lambda request: False))
 
     result = await ctx.call_tool("read_file", path=".")
 
@@ -87,7 +95,7 @@ async def test_list_dir_shows_dotfiles(ctx, tmp_path):
     (tmp_path / ".env").write_text("secret\n")
     (tmp_path / "main.py").write_text("x\n")
 
-    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+    await ctx.mount(workspace_plugin(tmp_path, lambda request: False))
 
     result = await ctx.call_tool("read_file", path=".")
 
@@ -98,7 +106,7 @@ async def test_list_dir_pages_entries(ctx, tmp_path):
     for number in range(5):
         (tmp_path / f"f{number}.txt").write_text("x\n")
 
-    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+    await ctx.mount(workspace_plugin(tmp_path, lambda request: False))
 
     result = await ctx.call_tool("read_file", path=".", start_line=2, end_line=3)
 
@@ -106,7 +114,7 @@ async def test_list_dir_pages_entries(ctx, tmp_path):
 
 
 async def test_list_dir_empty_directory(ctx, tmp_path):
-    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+    await ctx.mount(workspace_plugin(tmp_path, lambda request: False))
 
     result = await ctx.call_tool("read_file", path=".")
 
@@ -117,7 +125,7 @@ async def test_list_dir_denies_outside_path(ctx, tmp_path):
     outside = tmp_path.parent / f"{tmp_path.name}-dir"
     outside.mkdir()
 
-    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+    await ctx.mount(workspace_plugin(tmp_path, lambda request: False))
 
     with pytest.raises(PermissionError):
         await ctx.call_tool("read_file", path=str(outside))
@@ -130,8 +138,8 @@ async def test_list_dir_allows_approved_outside_path(ctx, tmp_path):
 
     calls = []
 
-    def approve(path, action):
-        calls.append((path, action))
+    def approve(request):
+        calls.append(request)
         return True
 
     await ctx.mount(workspace_plugin(tmp_path, approve))
@@ -139,13 +147,19 @@ async def test_list_dir_allows_approved_outside_path(ctx, tmp_path):
     result = await ctx.call_tool("read_file", path=str(outside))
 
     assert result == "x.txt"
-    assert calls == [(outside.resolve(), "read")]
+    assert calls == [
+        Approval(
+            action="read",
+            target=str(outside.resolve()),
+            scope=f"{outside.resolve()}/"
+        )
+    ]
 
 
 async def test_missing_path_suggests_close_names(ctx, tmp_path):
     (tmp_path / "workspace.py").write_text("x\n")
 
-    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+    await ctx.mount(workspace_plugin(tmp_path, lambda request: False))
 
     with pytest.raises(FileNotFoundError) as error:
         await ctx.call_tool("read_file", path="WorkSpace")
@@ -159,7 +173,7 @@ async def test_missing_path_suggests_close_names(ctx, tmp_path):
 async def test_missing_folder_names_nearest_parent(ctx, tmp_path):
     (tmp_path / "plugins").mkdir()
 
-    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+    await ctx.mount(workspace_plugin(tmp_path, lambda request: False))
 
     with pytest.raises(FileNotFoundError) as error:
         await ctx.call_tool("read_file", path="plugin/x.py")
@@ -173,7 +187,7 @@ async def test_missing_folder_names_nearest_parent(ctx, tmp_path):
 async def test_missing_path_uses_unique_alternate_name(ctx, tmp_path):
     (tmp_path / "a\u00a0b.txt").write_text("hi\n")
 
-    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+    await ctx.mount(workspace_plugin(tmp_path, lambda request: False))
 
     result = await ctx.call_tool("read_file", path="a b.txt")
 
@@ -183,7 +197,7 @@ async def test_missing_path_uses_unique_alternate_name(ctx, tmp_path):
 async def test_case_mismatch_is_not_corrected_silently(ctx, tmp_path):
     (tmp_path / "workspace.py").write_text("x\n")
 
-    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+    await ctx.mount(workspace_plugin(tmp_path, lambda request: False))
 
     with pytest.raises(FileNotFoundError):
         await ctx.call_tool("read_file", path="Workspace.py")
@@ -191,7 +205,7 @@ async def test_case_mismatch_is_not_corrected_silently(ctx, tmp_path):
 
 async def test_edit_file_requires_a_read_first(ctx, tmp_path):
     (tmp_path / "a.txt").write_text("one\n")
-    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+    await ctx.mount(workspace_plugin(tmp_path, lambda request: False))
 
     with pytest.raises(PermissionError):
         await ctx.call_tool("edit_file", path="a.txt", content="two\n")
@@ -201,7 +215,7 @@ async def test_edit_file_requires_a_read_first(ctx, tmp_path):
 
 async def test_edit_file_appends_after_read(ctx, tmp_path):
     (tmp_path / "a.txt").write_text("one\n")
-    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+    await ctx.mount(workspace_plugin(tmp_path, lambda request: False))
 
     await ctx.call_tool("read_file", path="a.txt")
     await ctx.call_tool("edit_file", path="a.txt", content="two\n")
@@ -211,7 +225,7 @@ async def test_edit_file_appends_after_read(ctx, tmp_path):
 
 async def test_edit_file_inserts_before_start_line(ctx, tmp_path):
     (tmp_path / "a.txt").write_text("one\ntwo\nthree\n")
-    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+    await ctx.mount(workspace_plugin(tmp_path, lambda request: False))
     await ctx.call_tool("read_file", path="a.txt")
 
     await ctx.call_tool("edit_file", path="a.txt", content="NEW\n", start_line=2)
@@ -221,7 +235,7 @@ async def test_edit_file_inserts_before_start_line(ctx, tmp_path):
 
 async def test_edit_file_removes_a_range(ctx, tmp_path):
     (tmp_path / "a.txt").write_text("one\ntwo\nthree\nfour\n")
-    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+    await ctx.mount(workspace_plugin(tmp_path, lambda request: False))
     await ctx.call_tool("read_file", path="a.txt")
 
     message = await ctx.call_tool("edit_file", path="a.txt", start_line=2, end_line=3)
@@ -232,7 +246,7 @@ async def test_edit_file_removes_a_range(ctx, tmp_path):
 
 async def test_edit_file_replaces_a_range(ctx, tmp_path):
     (tmp_path / "a.txt").write_text("one\ntwo\nthree\n")
-    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+    await ctx.mount(workspace_plugin(tmp_path, lambda request: False))
     await ctx.call_tool("read_file", path="a.txt")
 
     await ctx.call_tool(
@@ -244,7 +258,7 @@ async def test_edit_file_replaces_a_range(ctx, tmp_path):
 
 async def test_edit_file_appends_at_total_plus_one(ctx, tmp_path):
     (tmp_path / "a.txt").write_text("one\n")
-    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+    await ctx.mount(workspace_plugin(tmp_path, lambda request: False))
     await ctx.call_tool("read_file", path="a.txt")
 
     await ctx.call_tool("edit_file", path="a.txt", start_line=2, content="two\n")
@@ -258,7 +272,7 @@ async def test_edit_file_appends_at_total_plus_one(ctx, tmp_path):
 )
 async def test_edit_file_rejects_bad_lines(ctx, tmp_path, kwargs):
     (tmp_path / "a.txt").write_text("one\ntwo\n")
-    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+    await ctx.mount(workspace_plugin(tmp_path, lambda request: False))
     await ctx.call_tool("read_file", path="a.txt")
 
     with pytest.raises(ValueError):
@@ -270,8 +284,8 @@ async def test_edit_file_asks_for_write_access(ctx, tmp_path):
     outside.write_text("one\n")
     calls = []
 
-    def approve(path, action):
-        calls.append((path, action))
+    def approve(request):
+        calls.append(request)
         return True
 
     await ctx.mount(workspace_plugin(tmp_path, approve))
@@ -279,16 +293,26 @@ async def test_edit_file_asks_for_write_access(ctx, tmp_path):
     await ctx.call_tool("edit_file", path=str(outside), content="two\n")
 
     assert outside.read_text() == "one\ntwo\n"
-    assert calls == [(outside.resolve(), "read"), (outside.resolve(), "write")]
-
+    assert calls == [
+        Approval(
+            action="read",
+            target=str(outside.resolve()),
+            scope=str(outside.resolve()),
+        ),
+        Approval(
+            action="write",
+            target=str(outside.resolve()),
+            scope=str(outside.resolve()),
+        ),
+    ]
 
 async def test_edit_file_guard_does_not_survive_a_remount(ctx, tmp_path):
     (tmp_path / "a.txt").write_text("one\n")
-    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+    await ctx.mount(workspace_plugin(tmp_path, lambda request: False))
     await ctx.call_tool("read_file", path="a.txt")
 
     await ctx.revert_all()
-    await ctx.mount(workspace_plugin(tmp_path, lambda path, action: False))
+    await ctx.mount(workspace_plugin(tmp_path, lambda request: False))
 
     with pytest.raises(PermissionError):
         await ctx.call_tool("edit_file", path="a.txt", content="two\n")

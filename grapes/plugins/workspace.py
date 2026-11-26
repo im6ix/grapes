@@ -1,15 +1,15 @@
 from __future__ import annotations
 
 import unicodedata
-from collections.abc import Callable
 from os.path import dirname, join
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from grapes.approval import Approval, Approver
+
 if TYPE_CHECKING:
     from ..context import Context, Plugin
 
-Approver = Callable[[Path, str], bool]
 
 LINES_PER_READ = 500
 ENTRIES_PER_LIST = 200
@@ -67,9 +67,9 @@ def resolve_path(root: Path, path: str, approve: Approver, action: str) -> Path:
     if target == root or target.is_relative_to(root):
         return target
 
-    if approve(target, action):
+    scope = f"{target}/" if target.is_dir() else str(target)
+    if approve(Approval(action=action, target=str(target), scope=scope)):
         return target
-
     raise PermissionError(f"access denied: {target}")
 
 
@@ -277,7 +277,6 @@ def edit_file(
 ) -> str:
 
     target = resolve_path(root, path, approve, "write")
-
     if not target.is_file():
         raise FileNotFoundError(f"not a file: {target}")
     if target not in seen:

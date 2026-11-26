@@ -9,6 +9,7 @@ from grapes.agent.chat import Chat
 from grapes.agent.llm import llm_plugin
 from grapes.agent.model import current_model, list_models, model_plugin, set_model
 from grapes.agent.session import SessionStore, default_sessions_dir
+from grapes.approval import make_approver
 from grapes.plugins import calculator_plugin
 from grapes.plugins.workspace import workspace_plugin
 
@@ -109,30 +110,6 @@ def choose(options: list[str], prompt: str) -> str | None:
         return None
     return options[int(answer) - 1]
 
-
-def make_approver():
-    grants: list[Path] = []
-
-    def approve(path: Path, action: str) -> bool:
-        for grant in grants:
-            if grant == path:
-                return True
-            if grant.is_dir() and path.is_relative_to(grant):
-                return True
-        answer = (
-            input(f"{action} access to {path}? [y] once / [a] always / [n] no:")
-            .strip()
-            .lower()
-        )
-
-        if answer == "y":
-            return True
-        if answer == "a":
-            grants.append(path)
-            return True
-        return False
-
-    return approve
 
 
 asyncio.run(main())
