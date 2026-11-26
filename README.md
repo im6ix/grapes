@@ -72,8 +72,12 @@ store). The tests need neither.
       Listing a directory is part of `read_file` rather than a separate tool.
 - [x] Sandboxed `edit_file`: append, insert before a line, remove a range, or
       replace a range -- but only in a file that was read first in this session.
-- [ ] `run_shell`: run commands (and create files) with approval, a timeout, and
-      truncated output.
+- [x] `run_shell`: `bash -c` at the workspace root, deliberately pi's semantics --
+      no approval step (the description says plainly that paths inside a command
+      are not sandboxed). stdout and stderr are merged, output keeps the last
+      2000 lines or 50KB, an optional timeout kills the process group, and the
+      exit code is always the last line. This is also how files get created, so
+      there is no separate `write_file`.
 - [ ] Skills: discover `SKILL.md` files and let the model load them on demand.
 - [ ] Compaction: summarize older history so long sessions keep working.
 - [ ] Component loader: configuration reconciliation and hot module replacement.
@@ -171,13 +175,14 @@ grapes/
   service.py      # Service: base class for a plugin that provides a capability
   events.py       # Events: ctx.subscribe / ctx.publish
   logger.py       # Logger: ctx.logger.info / warn / error
+  approval.py    # Approval record + make_approver: the shared approval callback
   agent/
     loop.py       # run_agent(): model -> tool -> model, capped by max_steps
     model.py      # the real model: OpenAI-compatible chat API (opencode-go)
     llm.py        # Llm service + llm_plugin adapter registration
     chat.py       # Chat: transcript + turn persistence
     session.py    # SessionStore + Session: append-only JSONL transcripts
-  plugins/        # calculator, file_search, greeter, workspace
+  plugins/        # calculator, file_search, greeter, workspace, shell
 tests/            # one test file per concern
 docs/             # the reference paper
 main.py           # scratch entry point
